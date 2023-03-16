@@ -1,0 +1,54 @@
+[tool.ruff]
+line-length = 100
+exclude = [".git", ".ruff_cache" ]
+per-file-ignores = {}
+target-version = "py310"
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Ruff linter rulesets to apply.
+select = [
+    "A",   # Shadowing builtins.
+    "ARG", # Unused arguments.
+    "ANN", # Missing annotations.
+    "B",   # Possible bugs.
+    "BLE", # Blind excepts.
+    "C",
+    "C4",  # Comprehensions.
+    "C90", # Function complexity.
+    "D",   # Docstrings.
+    "DTZ", # Bad datetime use.
+    "E",   # Pycodestyle generic.
+    "EM",  # Nice error messages.
+    "ERA", # Detect commented-out code.
+    "F",   # Pyflakes generic.
+    "FBT", # Boolean traps.
+    "I",   # Unsorted import blocks.
+    "ICN", # Import name conventions.
+    "N",   # Naming.
+    "PD",  # Pandas antipatterns.
+    "PLC", # Pylint.
+    "PLE", # Pylint.
+    "PLR", # Pylint.
+    "PLW", # Pylint.
+    "PGH",
+    "Q",   # Consistent quotes.
+    "RET", # No weird returns.
+    "RUF", # Ruff-specific.
+    "SIM", # Simplify code.
+    "TID", # Tidy imports.
+    "UP",  # Pyupgrade.
+    "W",   # Pycodestyle generic.
+    "YTT",
+]
+
+# Specific rules to ignore.
+ignore = [
+    "ANN101", # Type annotations for `self`.
+    "B008", # Forbid `Depends(...)` in default values.
+    "D203", # Blank line before class docstring.
+    "D204", # Blank line after class docstring.
+    "D213",
+    "DTZ003",
+    "RET503",
+    "UP007",
+]
