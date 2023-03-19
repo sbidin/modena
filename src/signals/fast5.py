@@ -1,7 +1,10 @@
 """Provides various FAST5 parsing functionality."""
 
+from __future__ import annotations
+
 import logging
 import os
+from bisect import bisect_left
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,7 +12,6 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 log = logging.getLogger("signals.fast5")
 
 
@@ -24,12 +26,8 @@ class Fast5:
     start: int
     size: int
 
-    def position_range(self) -> tuple[int, int]:
-        """Get the range of positions found within the file."""
-        return self.start, self.start + self.size
-
     @staticmethod
-    def from_path(path: Path) -> Iterator["Fast5"]:
+    def from_path(path: Path) -> Iterator[Fast5]:
         """Yield all FAST5 files found under the given path."""
         if path.is_file():
             yield from Fast5._maybe_from_file_path(path)
@@ -39,17 +37,17 @@ class Fast5:
                 yield from Fast5._maybe_from_file_path(sub)
 
     @staticmethod
-    def _maybe_from_file_path(path: Path) -> Iterator["Fast5"]:
+    def _maybe_from_file_path(path: Path) -> Iterator[Fast5]:
         """Attempt parsing the basics of a FAST5 file."""
         try:
             log.debug(f"parsing attributes from {path}")
             with h5py.File(path) as f:
                 yield from Fast5._parse_file(f, path)
         except AssertionError as err:
-            log.warning(f"skipped file {path} because {err}")
+            log.debug(f"skipped file {path} because {err}")
     
     @staticmethod
-    def _parse_file(f: h5py.File, path: Path) -> Iterator["Fast5"]:
+    def _parse_file(f: h5py.File, path: Path) -> Iterator[Fast5]:
         """Get all basic file contents that are useful to us."""
         tpl = f.get("Analyses/RawGenomeCorrected_000/BaseCalled_template")
         assert tpl, "missing BaseCalled_template"
@@ -100,4 +98,15 @@ class Fast5:
     
     def __repr__(self) -> str:
         """Get a simple Fast5 representation for debugging."""
-        return f"Fast5({self.path})"
+        # return f"Fast5({self.path})"
+        return f"F({self.start}-{self.start+self.size})"
+    
+    def overlap(self, fasts: list[Fast5]) -> Fast5 | None:
+        """Return the first file whose positions overlap with self."""
+        j = bisect_left(fasts, (self.start, -self.size), key=lambda f: (f.start, -f.size))
+        for i in range(max(j - 1, 0), len(fasts)):
+            f = fasts[i]
+            if f.start >= self.start + self.size:
+                break
+            if self.start < f.start + f.size and f.start < self.start + self.size:
+                return f
