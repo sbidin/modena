@@ -1,0 +1,16 @@
+*.egg-info
+.git
+__pycache__
+.cache
+*.pyc
+.env
+/README.md
+/.python-version
+/pyproject.toml
+/.gitignore
+/docker-compose.yml
+/res/**/*.csv
+/.gitattributes
+/out
+/test
+/.ruff_cache
