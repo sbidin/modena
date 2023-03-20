@@ -52,11 +52,10 @@ def _concat(fasts: list[Fast5], min_coverage: int) -> Iterator[Signal]:
 
         # Process if at least one file within overlap.
         overlap = fasts[i:j]
-        if overlap:
-            start = max(start, f.start)
-            if start < f.end:
-                yield from _concat_range(overlap, start, f.end, min_coverage)
-                start = max(start, f.end)
+        start = max(start, f.start)
+        if start < f.end and j - i >= min_coverage:
+            yield from _concat_range(overlap, start, f.end, min_coverage)
+        start = max(start, f.end)
 
         # Get rid of the processed range.
         fasts[i] = None
