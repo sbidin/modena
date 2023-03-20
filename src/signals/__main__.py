@@ -35,11 +35,14 @@ def size_at_path(path: Path) -> int | None:
         return 0
 
 
-def reorder_datasets_by_size(a: Path, b: Path) -> tuple[Path, Path]:
-    """Reorder given datasets by size; we process the smaller one first."""
+def reorder_datasets_by_size(a: Path, b: Path) -> tuple[Path, Path, bool]:
+    """Reorder given datasets by size; we process the smaller one first.
+
+    The third returned value is True if the datasets have been reordered.
+    """
     datasets = [a, b]
     datasets.sort(key=size_at_path)
-    return tuple(datasets)
+    return *datasets, datasets[0] != a
 
 
 def pool_kuiper(t: tuple[Signal, Signal]) -> tuple[Signal, Signal, float, float]:
@@ -48,17 +51,8 @@ def pool_kuiper(t: tuple[Signal, Signal]) -> tuple[Signal, Signal, float, float]
     return (x, y, *astropy.stats.kuiper_two(x.data, y.data))
 
 
-@click.command()
-@click.argument("dataset1")
-@click.argument("dataset2")
-@click.option("--min-coverage", default=3)
-def _main(dataset1: str, dataset2: str, min_coverage: int) -> None:
-    """Run the main application."""
-    xs_path, ys_path = Path(dataset1), Path(dataset2)
-    assert xs_path.exists(), f"no such path exists: {xs_path}"
-    assert ys_path.exists(), f"no such path exists: {ys_path}"
-    xs_path, ys_path = reorder_datasets_by_size(xs_path, ys_path)
-
+def index_datasets(xs_path: Path, ys_path: Path) -> tuple[list[Fast5], list[Fast5]]:
+    """Preload, filter and sort relevant dataset subsets."""
     # The first (and smaller) dataset's basic data is read fully and sorted by
     # position. The second dataset is read in a streaming fashion, unordered.
     # We skip any file from the second dataset whose positions do not overlap
@@ -76,6 +70,22 @@ def _main(dataset1: str, dataset2: str, min_coverage: int) -> None:
     # them since their positions will never be matched anyway.
     ys.sort(key=lambda y: (y.start, -y.end))
     xs = [x for x in xs if x.overlap(ys)]
+    return xs, ys
+
+
+@click.command()
+@click.argument("dataset1")
+@click.argument("dataset2")
+@click.option("--min-coverage", default=3)
+def _main(dataset1: str, dataset2: str, min_coverage: int) -> None:
+    """Run the main application."""
+    xs_path, ys_path = Path(dataset1), Path(dataset2)
+    assert xs_path.exists(), f"no such path exists: {xs_path}"
+    assert ys_path.exists(), f"no such path exists: {ys_path}"
+    xs_path, ys_path, flipped = reorder_datasets_by_size(xs_path, ys_path)
+    xs, ys = index_datasets(xs_path, ys_path)
+    if flipped: # Undo the order flip so the output doesn't get mirrored.
+        xs, ys = ys, xs
 
     with multiprocessing.Pool() as pool:
         pairs = concat_pairs(xs, ys, min_coverage)
