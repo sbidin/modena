@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import logging
-import os
 from bisect import bisect_left
 from collections.abc import Iterator
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 import h5py
@@ -24,7 +24,8 @@ class Fast5:
     """
     path: Path
     start: int
-    size: int
+    end: int
+    position: int = 0 # Keeps track of our position within the file while reading.
 
     @staticmethod
     def from_path(path: Path) -> Iterator[Fast5]:
@@ -55,13 +56,14 @@ class Fast5:
         assert aln, "missing Alignment"
         evt = tpl.get("Events")
         assert evt, "missing Events"
-        mapped_start = aln.attrs.get("mapped_start")
-        assert isinstance(mapped_start, np.int64), "missing mapped_start"
+        start = aln.attrs.get("mapped_start")
+        assert isinstance(start, np.int64), "missing mapped_start"
         size = evt.shape[0]
         assert size > 0, "empty Events"
-        yield Fast5(path=path, start=mapped_start, size=size)
+        yield Fast5(path=path, start=start, end=start + size)
 
-    def signals(self) -> tuple[np.ndarray, np.ndarray] | None:
+    @cached_property
+    def signal(self) -> tuple[np.ndarray, np.ndarray] | None:
         """Get signal and base data."""
         try:
             log.debug(f"parsing signal data from {self.path}")
@@ -92,21 +94,22 @@ class Fast5:
                 signal = (sgn[read_start_rel_to_raw:] - shift) / scale
                 bases = evt["base"]
                 assert isinstance(bases, np.ndarray), "missing base"
-                return signal, bases
+                lengths = evt["length"]
+                assert isinstance(lengths, np.ndarray), "missing length"
+                return signal, lengths
         except AssertionError as err:
             log.warning(f"skipped file {self.path} because {err}")
     
     def __repr__(self) -> str:
         """Get a simple Fast5 representation for debugging."""
-        # return f"Fast5({self.path})"
-        return f"F({self.start}-{self.start+self.size})"
+        return f"F({self.start}-{self.end})"
     
     def overlap(self, fasts: list[Fast5]) -> Fast5 | None:
         """Return the first file whose positions overlap with self."""
-        j = bisect_left(fasts, (self.start, -self.size), key=lambda f: (f.start, -f.size))
+        j = bisect_left(fasts, (self.start, -self.end), key=lambda f: (f.start, -f.end))
         for i in range(max(j - 1, 0), len(fasts)):
             f = fasts[i]
-            if f.start >= self.start + self.size:
+            if f.start >= self.end:
                 break
-            if self.start < f.start + f.size and f.start < self.start + self.size:
+            if self.start < f.end and f.start < self.end:
                 return f

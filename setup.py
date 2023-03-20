@@ -9,5 +9,6 @@ setup(
         "click == 8.*",
         "astropy == 5.*",
         "h5py == 3.*",
+        "scipy == 1.*",
     ],
 )

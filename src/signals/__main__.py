@@ -5,8 +5,10 @@ import os
 import subprocess
 from pathlib import Path
 
+import astropy.stats
 import click
 
+from signals import concat
 from signals.fast5 import Fast5
 
 try:
@@ -39,7 +41,7 @@ def reorder_datasets_by_size(a: Path, b: Path) -> tuple[Path, Path]:
 
 @click.command()
 @click.argument("dataset1")
-@click.argument("dataset2")
+@click.argument("dataset2") # TODO: Dodaj minimum coverage argument, default 10.
 def _main(dataset1: str, dataset2: str) -> None:
     """Run the main application."""
     xs_path, ys_path = Path(dataset1), Path(dataset2)
@@ -52,7 +54,7 @@ def _main(dataset1: str, dataset2: str) -> None:
     # We skip any file from the second dataset whose positions do not overlap
     # with those of the first dataset.
     log.info(f"dataset1: loading: {xs_path}")
-    xs = sorted(Fast5.from_path(xs_path), key=lambda x: (x.start, -x.size))
+    xs = sorted(Fast5.from_path(xs_path), key=lambda x: (x.start, -x.end))
     xs_orig_len = len(xs)
     log.info(f"dataset1: loaded files: {xs_orig_len}")
 
@@ -70,9 +72,35 @@ def _main(dataset1: str, dataset2: str) -> None:
     # never overlap with any of the ones from the second dataset. Get rid of
     # them since their positions will never be matched anyway.
     log.info(f"dataset1: filtering: {xs_path}")
-    ys.sort(key=lambda y: (y.start, -y.size))
+    ys.sort(key=lambda y: (y.start, -y.end))
     xs = [x for x in xs if x.overlap(ys)]
     log.info(f"dataset1: filtered down to: {len(xs)}")
+
+    log.info("processing streams")
+    xs = concat.concat(xs)
+    ys = concat.concat(ys)
+
+    x = next(xs, None)
+    y = next(ys, None)
+    while True:
+        if x is None or y is None:
+            break
+
+        if x.position > y.position:
+            y = next(ys, None)
+            continue
+
+        if y.position > x.position:
+            x = next(xs, None)
+            continue
+
+        print(
+            x.position,
+            x.coverage,
+            y.coverage,
+            *astropy.stats.kuiper_two(x.data, y.data))
+        x = next(xs, None)
+        y = next(ys, None)
 
 
 if __name__ == "__main__":
