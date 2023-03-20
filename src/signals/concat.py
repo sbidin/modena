@@ -1,4 +1,4 @@
-"""Provides various signal-related functionality."""
+"""Provides an iterator concatenating signals from multiple FAST5 files."""
 
 from collections.abc import Iterator
 from dataclasses import dataclass

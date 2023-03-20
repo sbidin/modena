@@ -53,30 +53,20 @@ def _main(dataset1: str, dataset2: str) -> None:
     # position. The second dataset is read in a streaming fashion, unordered.
     # We skip any file from the second dataset whose positions do not overlap
     # with those of the first dataset.
-    log.info(f"dataset1: loading: {xs_path}")
     xs = sorted(Fast5.from_path(xs_path), key=lambda x: (x.start, -x.end))
-    xs_orig_len = len(xs)
-    log.info(f"dataset1: loaded files: {xs_orig_len}")
-
     ys = []
     ys_orig_len = 0
-    log.info(f"dataset2: loading: {ys_path}")
     for y in Fast5.from_path(ys_path):
         ys_orig_len += 1
         if y.overlap(xs):
             ys.append(y)
-    log.info(f"dataset2: loaded files: {ys_orig_len}")
-    log.info(f"dataset2: filtered down to: {len(ys)}")
 
     # We then reverse the process: there are files from the first dataset that
     # never overlap with any of the ones from the second dataset. Get rid of
     # them since their positions will never be matched anyway.
-    log.info(f"dataset1: filtering: {xs_path}")
     ys.sort(key=lambda y: (y.start, -y.end))
     xs = [x for x in xs if x.overlap(ys)]
-    log.info(f"dataset1: filtered down to: {len(xs)}")
 
-    log.info("processing streams")
     xs = concat.concat(xs)
     ys = concat.concat(ys)
 
