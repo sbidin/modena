@@ -51,6 +51,7 @@ def concat(fasts: list[Fast5], min_coverage: int) -> Iterator[Signal]:
 
     for i, f in enumerate(fasts):
         # Find minimum overlap of current file with next files.
+        j = i + 1
         for j in range(i + 1, len(fasts)):
             if fasts[j].start >= f.end:
                 break
