@@ -17,7 +17,7 @@ log = logging.getLogger("signals.fast5")
 
 @dataclass
 class Fast5:
-    """A tiny subset of a parsed FAST5 file.
+    """A subset of a parsed FAST5 file.
 
     This is fetched prior to fetching any signal data. Position data is used to
     later on pick which files we actually want to process and in which order.
@@ -25,9 +25,6 @@ class Fast5:
     path: Path
     start: int
     end: int
-
-    position: int = 0 # Keeps track of our position within the file while reading.
-    last_i: int = None # Last position accessed.
 
     @staticmethod
     def from_path(path: Path) -> Iterator[Fast5]:
@@ -38,6 +35,34 @@ class Fast5:
         for sub in path.glob("**/*.*"):
             if sub.name.lower().endswith(".fast5") and sub.is_file():
                 yield from Fast5._maybe_from_file_path(sub)
+
+    def overlap(self, fasts: list[Fast5]) -> Fast5 | None:
+        """Return the first file whose positions overlap with self."""
+        j = bisect_left(fasts, (self.start, -self.end), key=lambda f: (f.start, -f.end))
+        for i in range(max(j - 1, 0), len(fasts)):
+            f = fasts[i]
+            if f.start >= self.end:
+                break
+            if self.start < f.end and f.start < self.end:
+                return f
+
+    @cached_property 
+    def positions(self) -> list[int]:
+        """Returns positions within the underlying array to extract signals from."""
+        _, lengths = self.signal
+        ps = [0, 0, 0] # Note: this is possibly a bug and should be incremented by len.
+        for i in range(2, lengths.shape[0] - 3): # Note: probably should be -2, not -3.
+            ps.append(ps[-1] + lengths[i])
+        for _ in range(3): # Note: probably should be 2, not 3.
+            ps.append(ps[-1]) # Note: possibly should be incremented by length as well.
+        return ps
+
+    def signal_at(self, i: int) -> list[float] | None:
+        """Return signal data from a certain position in the file."""
+        signal, length = self.signal
+        assert signal is not None, f"file {self.path} missing signal data"
+        i -= self.start
+        return signal[self.positions[i]:self.positions[i] + length[i]]
 
     @staticmethod
     def _maybe_from_file_path(path: Path) -> Iterator[Fast5]:
@@ -64,29 +89,9 @@ class Fast5:
         assert isinstance(start, np.int64), "missing mapped_start"
         size = evt.shape[0]
         assert size > 0, "empty Events"
-        fast5 = Fast5(path=path, start=start, end=start + size, last_i=start)
+        fast5 = Fast5(path=path, start=start, end=start + size)
         log.debug(f"parsed file {path} {fast5}")
         yield fast5
-
-    def signal_at(self, i: int) -> list[float] | None:
-        """Return signal data from a certain position in the file."""
-        signal, length = self.signal
-        assert signal is not None, f"file {self.path} missing signal data"
-
-        # Convert absolute positions to within-signal ones.
-        i -= self.start
-        size = self.end - self.start
-
-        # We might have skipped a portion of the positions. Time to catch up.
-        if i > 2 and self.last_i < i:
-            self.position += sum(length[self.last_i + 1:min(i, size - 2)])
-
-        signal = signal[self.position:self.position + length[i]]
-        if 1 < i < size - 2: # Beginnings and ends are special.
-            self.position += length[i]
-
-        self.last_i = i
-        return signal
 
     @cached_property
     def signal(self) -> tuple[np.ndarray, np.ndarray] | None:
@@ -128,14 +133,4 @@ class Fast5:
 
     def __repr__(self) -> str:
         """Get a simple Fast5 representation for debugging."""
-        return f"F({self.start}-{self.end})"
-
-    def overlap(self, fasts: list[Fast5]) -> Fast5 | None:
-        """Return the first file whose positions overlap with self."""
-        j = bisect_left(fasts, (self.start, -self.end), key=lambda f: (f.start, -f.end))
-        for i in range(max(j - 1, 0), len(fasts)):
-            f = fasts[i]
-            if f.start >= self.end:
-                break
-            if self.start < f.end and f.start < self.end:
-                return f
+        return f"Fast5({self.path}, {self.start}-{self.end})"

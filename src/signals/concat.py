@@ -1,11 +1,14 @@
 """Provides an iterator concatenating signals from multiple FAST5 files."""
 
+import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
 
 import numpy as np
 
 from signals.fast5 import Fast5
+
+log = logging.getLogger("signals.concat")
 
 
 @dataclass
@@ -22,30 +25,21 @@ def concat_pairs(
         min_coverage: int) \
         -> Iterator[tuple[Signal, Signal]]:
     """Yield tuples of same-position concatenated signals."""
-    xs = concat(xs, min_coverage)
-    ys = concat(ys, min_coverage)
-    x = next(xs, None)
-    y = next(ys, None)
-
+    xs, ys = _concat(xs, min_coverage), _concat(ys, min_coverage)
+    x, y = next(xs, None), next(ys, None)
     while True:
         if x is None or y is None:
             break
-
-        if x.position > y.position:
+        elif x.position > y.position:
             y = next(ys, None)
-            continue
-
-        if y.position > x.position:
+        elif y.position > x.position:
             x = next(xs, None)
-            continue
-
-        assert x.position == y.position
-        yield x, y
-        x = next(xs, None)
-        y = next(ys, None)
+        else:
+            yield x, y
+            x, y = next(xs, None), next(ys, None)
 
 
-def concat(fasts: list[Fast5], min_coverage: int) -> Iterator[Signal]:
+def _concat(fasts: list[Fast5], min_coverage: int) -> Iterator[Signal]:
     """Yield concatenated signals from FAST5 files."""
     fasts.sort(key=lambda f: (f.start, f.end))
     start = 0 # Up to which position has been processed already?
@@ -53,9 +47,8 @@ def concat(fasts: list[Fast5], min_coverage: int) -> Iterator[Signal]:
     for i, f in enumerate(fasts):
         # Find minimum overlap of current file with next files.
         j = i + 1
-        for j in range(i + 1, len(fasts)):
-            if fasts[j].start >= f.end:
-                break
+        while j < len(fasts) and fasts[j].start < f.end:
+            j += 1
 
         # Process if at least one file within overlap.
         overlap = fasts[i:j]
@@ -63,7 +56,7 @@ def concat(fasts: list[Fast5], min_coverage: int) -> Iterator[Signal]:
             start = max(start, f.start)
             if start < f.end:
                 yield from _concat_range(overlap, start, f.end, min_coverage)
-                start = max(start, f.end - 1)
+                start = max(start, f.end)
 
         # Get rid of the processed range.
         fasts[i] = None
