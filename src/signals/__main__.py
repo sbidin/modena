@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import logging
+import multiprocessing
 import os
 import subprocess
 from pathlib import Path
@@ -8,7 +9,7 @@ from pathlib import Path
 import astropy.stats
 import click
 
-from signals import concat
+from signals.concat import concat_pairs, Signal
 from signals.fast5 import Fast5
 
 try:
@@ -37,6 +38,12 @@ def reorder_datasets_by_size(a: Path, b: Path) -> tuple[Path, Path]:
     datasets = [a, b]
     datasets.sort(key=size_at_path)
     return tuple(datasets)
+
+
+def pool_kuiper(t: tuple[Signal, Signal]) -> tuple[Signal, Signal, float, float]:
+    """Return the Kuiper statistic for two given samples."""
+    x, y = t
+    return (x, y, *astropy.stats.kuiper_two(x.data, y.data))
 
 
 @click.command()
@@ -68,12 +75,10 @@ def _main(dataset1: str, dataset2: str, min_coverage: int) -> None:
     ys.sort(key=lambda y: (y.start, -y.end))
     xs = [x for x in xs if x.overlap(ys)]
 
-    for x, y in concat.concat_pairs(xs, ys, min_coverage):
-        print(
-            x.position,
-            x.coverage,
-            y.coverage,
-            *astropy.stats.kuiper_two(x.data, y.data))
+    with multiprocessing.Pool() as pool:
+        pairs = concat_pairs(xs, ys, min_coverage)
+        for x, y, dist, pval in pool.imap(pool_kuiper, pairs, chunksize=10_000):
+            print(x.position, x.coverage, y.coverage, dist, pval, sep="\t")
 
 
 if __name__ == "__main__":
