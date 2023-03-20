@@ -128,7 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# data-ml specific
-/res/**/*.csv
-/res/**/*.gz
-.ruff_cache
+# signals specific
+test
