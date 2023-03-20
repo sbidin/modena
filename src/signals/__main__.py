@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+"""Runs the main application."""
+
 import logging
 import multiprocessing
 import os
@@ -9,7 +11,7 @@ from pathlib import Path
 import astropy.stats
 import click
 
-from signals.concat import concat_pairs, Signal
+from signals.concat import Signal, concat_pairs
 from signals.fast5 import Fast5
 
 try:
@@ -28,7 +30,7 @@ def size_at_path(path: Path) -> int | None:
         assert size > 0, "size is zero"
         log.debug(f"size of {path} is {size}")
         return size
-    except Exception as err:
+    except Exception as err: # noqa: BLE001
         log.warning(f"could not estimate size at path {path}: {err}")
         return 0
 

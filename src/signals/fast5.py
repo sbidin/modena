@@ -18,7 +18,7 @@ log = logging.getLogger("signals.fast5")
 @dataclass
 class Fast5:
     """A tiny subset of a parsed FAST5 file.
-    
+
     This is fetched prior to fetching any signal data. Position data is used to
     later on pick which files we actually want to process and in which order.
     """
@@ -46,7 +46,7 @@ class Fast5:
                 yield from Fast5._parse_file(f, path)
         except AssertionError as err:
             log.debug(f"skipped file {path} because {err}")
-    
+
     @staticmethod
     def _parse_file(f: h5py.File, path: Path) -> Iterator[Fast5]:
         """Get all basic file contents that are useful to us."""
@@ -99,11 +99,11 @@ class Fast5:
                 return signal, lengths
         except AssertionError as err:
             log.warning(f"skipped file {self.path} because {err}")
-    
+
     def __repr__(self) -> str:
         """Get a simple Fast5 representation for debugging."""
         return f"F({self.start}-{self.end})"
-    
+
     def overlap(self, fasts: list[Fast5]) -> Fast5 | None:
         """Return the first file whose positions overlap with self."""
         j = bisect_left(fasts, (self.start, -self.end), key=lambda f: (f.start, -f.end))
