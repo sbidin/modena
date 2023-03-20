@@ -39,6 +39,7 @@ def concat_pairs(
             x = next(xs, None)
             continue
 
+        assert x.position == y.position
         yield x, y
         x = next(xs, None)
         y = next(ys, None)
@@ -81,12 +82,8 @@ def _concat_range(
 
         # For each file containing this position...
         for f in (f for f in fasts if f.start <= i < f.end):
-            data, length = f.signal
-            length = length[i - f.start]
-            signal.data.extend(data[f.position:f.position + length])
+            signal.data.extend(f.signal_at(i))
             signal.coverage += 1
-            if 1 < i < end - 2: # Beginnings and ends are special.
-                f.position += length
 
         if signal.coverage >= min_coverage:
             signal.data = np.array(signal.data)

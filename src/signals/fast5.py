@@ -25,7 +25,9 @@ class Fast5:
     path: Path
     start: int
     end: int
+
     position: int = 0 # Keeps track of our position within the file while reading.
+    last_i: int = None # Last position accessed.
 
     @staticmethod
     def from_path(path: Path) -> Iterator[Fast5]:
@@ -54,19 +56,42 @@ class Fast5:
         assert tpl, "missing BaseCalled_template"
         aln = tpl.get("Alignment")
         assert aln, "missing Alignment"
+        strand = aln.attrs.get("mapped_strand")
+        assert strand == "+", "strand not positive"
         evt = tpl.get("Events")
         assert evt, "missing Events"
         start = aln.attrs.get("mapped_start")
         assert isinstance(start, np.int64), "missing mapped_start"
         size = evt.shape[0]
         assert size > 0, "empty Events"
-        yield Fast5(path=path, start=start, end=start + size)
+        fast5 = Fast5(path=path, start=start, end=start + size, last_i=start)
+        log.debug(f"parsed file {path} {fast5}")
+        yield fast5
+
+    def signal_at(self, i: int) -> list[float] | None:
+        """Return signal data from a certain position in the file."""
+        signal, length = self.signal
+        assert signal is not None, f"file {self.path} missing signal data"
+
+        # Convert absolute positions to within-signal ones.
+        i -= self.start
+        size = self.end - self.start
+
+        # We might have skipped a portion of the positions. Time to catch up.
+        if i > 2 and self.last_i < i:
+            self.position += sum(length[self.last_i + 1:min(i, size - 2)])
+
+        signal = signal[self.position:self.position + length[i]]
+        if 1 < i < size - 2: # Beginnings and ends are special.
+            self.position += length[i]
+
+        self.last_i = i
+        return signal
 
     @cached_property
     def signal(self) -> tuple[np.ndarray, np.ndarray] | None:
         """Get signal and base data."""
         try:
-            log.debug(f"parsing signal data from {self.path}")
             with h5py.File(self.path) as f:
                 # Get useful groups.
                 tpl = f.get("Analyses/RawGenomeCorrected_000/BaseCalled_template")
@@ -98,7 +123,8 @@ class Fast5:
                 assert isinstance(lengths, np.ndarray), "missing length"
                 return signal, lengths
         except AssertionError as err:
-            log.warning(f"skipped file {self.path} because {err}")
+            log.debug(f"skipped file {self.path} because {err}")
+            return None, None
 
     def __repr__(self) -> str:
         """Get a simple Fast5 representation for debugging."""
