@@ -16,7 +16,35 @@ class Signal:
     data: np.ndarray
 
 
-def concat(fasts: list[Fast5]) -> Iterator[Signal]:
+def concat_pairs(
+        xs: list[Fast5],
+        ys: list[Fast5],
+        min_coverage: int) \
+        -> Iterator[tuple[Signal, Signal]]:
+    """Yield tuples of same-position concatenated signals."""
+    xs = concat(xs, min_coverage)
+    ys = concat(ys, min_coverage)
+    x = next(xs, None)
+    y = next(ys, None)
+
+    while True:
+        if x is None or y is None:
+            break
+
+        if x.position > y.position:
+            y = next(ys, None)
+            continue
+
+        if y.position > x.position:
+            x = next(xs, None)
+            continue
+
+        yield x, y
+        x = next(xs, None)
+        y = next(ys, None)
+
+
+def concat(fasts: list[Fast5], min_coverage: int) -> Iterator[Signal]:
     """Yield concatenated signals from FAST5 files."""
     fasts.sort(key=lambda f: (f.start, f.end))
     start = 0 # Up to which position has been processed already?
@@ -32,14 +60,19 @@ def concat(fasts: list[Fast5]) -> Iterator[Signal]:
         if overlap:
             start = max(start, f.start)
             if start < f.end:
-                yield from _concat_range(overlap, start, f.end)
+                yield from _concat_range(overlap, start, f.end, min_coverage)
                 start = max(start, f.end - 1)
 
         # Get rid of the processed range.
         fasts[i] = None
 
 
-def _concat_range(fasts: list[Fast5], start: int, end: int) -> Iterator[Signal]:
+def _concat_range(
+        fasts: list[Fast5],
+        start: int,
+        end: int,
+        min_coverage: int) \
+        -> Iterator[Signal]:
     """Yield concatenated signals for a range of positions."""
     # For each position...
     for i in range(start, end):
@@ -54,5 +87,6 @@ def _concat_range(fasts: list[Fast5], start: int, end: int) -> Iterator[Signal]:
             if 1 < i < end - 2: # Beginnings and ends are special.
                 f.position += length
 
-        signal.data = np.array(signal.data)
-        yield signal
+        if signal.coverage >= min_coverage:
+            signal.data = np.array(signal.data)
+            yield signal

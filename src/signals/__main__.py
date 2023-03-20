@@ -41,8 +41,9 @@ def reorder_datasets_by_size(a: Path, b: Path) -> tuple[Path, Path]:
 
 @click.command()
 @click.argument("dataset1")
-@click.argument("dataset2") # TODO: Dodaj minimum coverage argument, default 10.
-def _main(dataset1: str, dataset2: str) -> None:
+@click.argument("dataset2")
+@click.option("--min-coverage", default=3)
+def _main(dataset1: str, dataset2: str, min_coverage: int) -> None:
     """Run the main application."""
     xs_path, ys_path = Path(dataset1), Path(dataset2)
     assert xs_path.exists(), f"no such path exists: {xs_path}"
@@ -67,30 +68,12 @@ def _main(dataset1: str, dataset2: str) -> None:
     ys.sort(key=lambda y: (y.start, -y.end))
     xs = [x for x in xs if x.overlap(ys)]
 
-    xs = concat.concat(xs)
-    ys = concat.concat(ys)
-
-    x = next(xs, None)
-    y = next(ys, None)
-    while True:
-        if x is None or y is None:
-            break
-
-        if x.position > y.position:
-            y = next(ys, None)
-            continue
-
-        if y.position > x.position:
-            x = next(xs, None)
-            continue
-
+    for x, y in concat.concat_pairs(xs, ys, min_coverage):
         print(
             x.position,
             x.coverage,
             y.coverage,
             *astropy.stats.kuiper_two(x.data, y.data))
-        x = next(xs, None)
-        y = next(ys, None)
 
 
 if __name__ == "__main__":
