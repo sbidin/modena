@@ -81,7 +81,7 @@ class Fast5:
         aln = tpl.get("Alignment")
         assert aln, "missing Alignment"
         strand = aln.attrs.get("mapped_strand")
-        assert strand == "+", "strand not positive"
+        assert strand == "+", "strand not positive" # Note: probably remove this one?
         evt = tpl.get("Events")
         assert evt, "missing Events"
         start = aln.attrs.get("mapped_start")
