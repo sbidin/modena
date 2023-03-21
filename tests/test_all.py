@@ -10,7 +10,7 @@ def test_csv_equals_old_script() -> None:
     """CSV output equals output of old script."""
     out = StringIO()
     inp1, inp2 = Path("tests/inp/1"), Path("tests/inp/2")
-    run_on_datasets(inp1, inp2, 1, out)
+    run_on_datasets(inp1, inp2, 1, out, "csv")
     out = out.getvalue()
     with open("tests/out.csv") as f:
         exp = f.read()
