@@ -11,4 +11,7 @@ setup(
         "h5py == 3.*",
         "scipy == 1.*",
     ],
+    extras_require={'dev': [
+        'pytest == 7.*',
+    ]},
 )
