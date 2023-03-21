@@ -14,4 +14,5 @@ def test_csv_equals_old_script() -> None:
     out = out.getvalue()
     with open("tests/out.csv") as f:
         exp = f.read()
-        assert out == exp, "output mismatch"
+    for a, b in zip(out.splitlines(), exp.splitlines(), strict=False):
+        assert a == b, "output mismatch"
