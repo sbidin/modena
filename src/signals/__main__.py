@@ -22,20 +22,23 @@ finally:
 @click.command()
 @click.argument("dataset1")
 @click.argument("dataset2")
+@click.option("--out", default="-")
 @click.option("--out-format", default="bedgraph")
 @click.option("--min-coverage", default=3)
 def _main(
         dataset1: str,
         dataset2: str,
-        min_coverage: int,
-        out_format: str) \
+        out: str,
+        out_format: str,
+        min_coverage: int) \
         -> None:
     """Run the main application."""
     xs_path, ys_path = Path(dataset1), Path(dataset2)
     assert xs_path.exists(), f"no such path exists: {xs_path}"
     assert ys_path.exists(), f"no such path exists: {ys_path}"
     assert out_format in ("bedgraph", "csv"), f"bad format: {out_format}"
-    run_on_datasets(xs_path, ys_path, min_coverage, sys.stdout, out_format)
+    out = sys.stdout if out == "-" else Path(out).open("w")
+    run_on_datasets(xs_path, ys_path, min_coverage, out, out_format)
 
 
 if __name__ == "__main__":
