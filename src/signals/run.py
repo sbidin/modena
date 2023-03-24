@@ -5,20 +5,21 @@ from pathlib import Path
 from typing import TextIO
 
 import astropy.stats
+import numpy as np
 
 from signals.concat import Signal, concat_pairs
 from signals.fast5 import Fast5
 from signals.helpers import order_paths_by_size
 
 
-def emit_line_csv(x: Signal, dist: float, out: TextIO) -> None:
+def emit_line_csv(pos: int, dist: float, out: TextIO) -> None:
     """Emit a single value in the CSV format."""
-    out.write(f"{x.position},{dist:.5f}\n")
+    out.write(f"{pos},{dist:.5f}\n")
 
 
-def emit_line_bedgraph(x: Signal, dist: float, out: TextIO) -> None:
+def emit_line_bedgraph(pos: int, dist: float, out: TextIO) -> None:
     """Emit a single value in the bedGraph format."""
-    out.write(f"c1 {x.position} {x.position + 1} {dist:.5f}\n")
+    out.write(f"c1 {pos} {pos + 1} {dist:.5f}\n")
 
 
 def run_on_datasets(
@@ -44,8 +45,8 @@ def run_on_datasets(
 
     with multiprocessing.Pool() as pool:
         pairs = concat_pairs(xs, ys, min_coverage)
-        for x, _, dist, _ in pool.imap(kuiper, pairs, chunksize=10_000):
-            emit_func(x, dist, out)
+        for pos, dist in pool.imap(kuiper, pairs, chunksize=10_000):
+            emit_func(pos, dist, out)
 
 
 def index_datasets(xs_path: Path, ys_path: Path) -> tuple[list[Fast5], list[Fast5]]:
@@ -70,8 +71,10 @@ def index_datasets(xs_path: Path, ys_path: Path) -> tuple[list[Fast5], list[Fast
     return xs, ys
 
 
-def kuiper(t: tuple[Signal, Signal]) -> tuple[Signal, Signal, float, float]:
+def kuiper(t: tuple[Signal, Signal]) -> tuple[int, float]:
     """Return the Kuiper statistic for two given samples."""
     x, y = t
-    d, p = astropy.stats.kuiper_two(x.data, y.data)
-    return x, y, d, p
+    np.ndarray.sort(x.data)
+    np.ndarray.sort(y.data)
+    d = astropy.stats._stats.ks_2samp(x.data, y.data)
+    return x.position, d
