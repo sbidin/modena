@@ -46,15 +46,13 @@ class Fast5:
             if self.start < f.end and f.start < self.end:
                 return f
 
-    @cached_property 
+    @cached_property
     def positions(self) -> list[int]:
         """Returns positions within the underlying array to extract signals from."""
         _, lengths = self.signal
-        ps = [0, 0, 0] # Note: this is possibly a bug and should be incremented by len.
-        for i in range(2, lengths.shape[0] - 3): # Note: probably should be -2, not -3.
+        ps = [0]
+        for i in range(lengths.shape[0]):
             ps.append(ps[-1] + lengths[i])
-        for _ in range(3): # Note: probably should be 2, not 3.
-            ps.append(ps[-1]) # Note: possibly should be incremented by length as well.
         return ps
 
     def signal_at(self, i: int) -> list[float] | None:
