@@ -24,6 +24,7 @@ finally:
 @click.argument("dataset2")
 @click.option("-c", "--min-coverage", type=int, default=5)
 @click.option("-r", "--resample", type=int, default=None)
+@click.option("-w", "--window-size", type=int, default=None)
 @click.option("-o", "--out", default="-")
 @click.option("--out-format", default="bedgraph")
 def _main(
@@ -31,6 +32,7 @@ def _main(
         dataset2: str,
         min_coverage: int,
         resample: int | None,
+        window_size: int | None,
         out: str,
         out_format: str) \
         -> None:
@@ -40,7 +42,14 @@ def _main(
     assert ys_path.exists(), f"no such path exists: {ys_path}"
     assert out_format in ("bedgraph", "csv"), f"bad format: {out_format}"
     out = sys.stdout if out == "-" else Path(out).open("w")
-    run_on_datasets(xs_path, ys_path, min_coverage, resample, out, out_format)
+    run_on_datasets(
+        xs_path,
+        ys_path,
+        min_coverage,
+        resample,
+        window_size,
+        out,
+        out_format)
 
 
 if __name__ == "__main__":

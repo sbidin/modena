@@ -1,6 +1,6 @@
 """Exposes the `run_on_datasets` function."""
 
-import multiprocessing
+# import multiprocessing
 from pathlib import Path
 from typing import TextIO
 
@@ -8,6 +8,7 @@ import astropy.stats
 import numpy as np
 
 from signals.concat import Signal, concat_pairs
+from signals.distsum import distsum
 from signals.fast5 import Fast5
 from signals.helpers import order_paths_by_size
 
@@ -27,6 +28,7 @@ def run_on_datasets(
         ys_path: Path,
         min_coverage: int,
         resample: int | None,
+        window_size: int | None,
         out: TextIO,
         out_format: str) \
         -> None:
@@ -44,10 +46,14 @@ def run_on_datasets(
         out.write("position,distance\n")
         emit_func = emit_line_csv
 
-    with multiprocessing.Pool() as pool:
-        pairs = concat_pairs(xs, ys, min_coverage, resample)
-        for pos, dist in pool.imap(kuiper, pairs, chunksize=10_000):
-            emit_func(pos, dist, out)
+    # with multiprocessing.Pool() as pool:
+    pairs = concat_pairs(xs, ys, min_coverage, resample)
+    stats = map(kuiper, pairs)
+    if window_size is not None:
+        stats = distsum(stats, window_size)
+    # for pos, dist in pool.imap(kuiper, pairs, chunksize=10_000):
+    for pos, dist in stats:
+        emit_func(pos, dist, out)
 
 
 def index_datasets(xs_path: Path, ys_path: Path) -> tuple[list[Fast5], list[Fast5]]:
