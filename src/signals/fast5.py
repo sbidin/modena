@@ -55,12 +55,18 @@ class Fast5:
             ps.append(ps[-1] + lengths[i])
         return ps
 
-    def signal_at(self, i: int) -> list[float] | None:
-        """Return signal data from a certain position in the file."""
+    def signal_at(self, i: int, resample: int | None) -> np.ndarray:
+        """Return (optionally resampled) signal data at a certain position in the file."""
         signal, length = self.signal
         assert signal is not None, f"file {self.path} missing signal data"
         i -= self.start
-        return signal[self.positions[i]:self.positions[i] + length[i]]
+        signal = signal[self.positions[i]:self.positions[i] + length[i]]
+
+        # Optionally performs resampling.
+        if resample is not None and resample != len(signal):
+            signal = np.random.choice(signal, size=resample, replace=True)
+
+        return signal
 
     @staticmethod
     def _maybe_from_file_path(path: Path) -> Iterator[Fast5]:

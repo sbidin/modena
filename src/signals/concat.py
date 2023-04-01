@@ -22,10 +22,12 @@ class Signal:
 def concat_pairs(
         xs: list[Fast5],
         ys: list[Fast5],
-        min_coverage: int) \
+        min_coverage: int,
+        resample: int | None) \
         -> Iterator[tuple[Signal, Signal]]:
     """Yield tuples of same-position concatenated signals."""
-    xs, ys = _concat(xs, min_coverage), _concat(ys, min_coverage)
+    xs = _concat(xs, min_coverage, resample)
+    ys = _concat(ys, min_coverage, resample)
     x, y = next(xs, None), next(ys, None)
     while True:
         if x is None or y is None:
@@ -39,7 +41,11 @@ def concat_pairs(
             x, y = next(xs, None), next(ys, None)
 
 
-def _concat(fasts: list[Fast5], min_coverage: int) -> Iterator[Signal]:
+def _concat(
+        fasts: list[Fast5],
+        min_coverage: int,
+        resample: int | None) \
+        -> Iterator[Signal]:
     """Yield concatenated signals from FAST5 files."""
     fasts.sort(key=lambda f: (f.start, f.end))
     start = 0 # Up to which position has been processed already?
@@ -54,7 +60,7 @@ def _concat(fasts: list[Fast5], min_coverage: int) -> Iterator[Signal]:
         overlap = fasts[i:j]
         start = max(start, f.start)
         if start < f.end and j - i >= min_coverage:
-            yield from _concat_range(overlap, start, f.end, min_coverage)
+            yield from _concat_range(overlap, start, f.end, min_coverage, resample)
         start = max(start, f.end)
 
         # Get rid of the processed range.
@@ -65,7 +71,8 @@ def _concat_range(
         fasts: list[Fast5],
         start: int,
         end: int,
-        min_coverage: int) \
+        min_coverage: int,
+        resample: int | None) \
         -> Iterator[Signal]:
     """Yield concatenated signals for a range of positions."""
     # For each position...
@@ -74,7 +81,7 @@ def _concat_range(
 
         # For each file containing this position...
         for f in (f for f in fasts if f.start <= i < f.end):
-            signal.data.extend(f.signal_at(i))
+            signal.data.extend(f.signal_at(i, resample))
             signal.coverage += 1
 
         if signal.coverage >= min_coverage:

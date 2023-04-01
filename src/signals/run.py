@@ -26,6 +26,7 @@ def run_on_datasets(
         xs_path: Path,
         ys_path: Path,
         min_coverage: int,
+        resample: int | None,
         out: TextIO,
         out_format: str) \
         -> None:
@@ -44,7 +45,7 @@ def run_on_datasets(
         emit_func = emit_line_csv
 
     with multiprocessing.Pool() as pool:
-        pairs = concat_pairs(xs, ys, min_coverage)
+        pairs = concat_pairs(xs, ys, min_coverage, resample)
         for pos, dist in pool.imap(kuiper, pairs, chunksize=10_000):
             emit_func(pos, dist, out)
 
