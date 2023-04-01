@@ -34,10 +34,6 @@ def distsum(
         yield from _distsum_at(window, i)
 
 
-
-
-
-
 def _distsum_at(
         window: deque[tuple[int, float]],
         i: int) \

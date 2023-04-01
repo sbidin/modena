@@ -1,6 +1,5 @@
 """Exposes the `run_on_datasets` function."""
 
-# import multiprocessing
 from pathlib import Path
 from typing import TextIO
 
@@ -46,12 +45,11 @@ def run_on_datasets(
         out.write("position,distance\n")
         emit_func = emit_line_csv
 
-    # with multiprocessing.Pool() as pool:
     pairs = concat_pairs(xs, ys, min_coverage, resample)
     stats = map(kuiper, pairs)
     if window_size is not None:
         stats = distsum(stats, window_size)
-    # for pos, dist in pool.imap(kuiper, pairs, chunksize=10_000):
+
     for pos, dist in stats:
         emit_func(pos, dist, out)
 
