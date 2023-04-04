@@ -1,0 +1,2 @@
+/tests/inp/** filter=lfs diff=lfs merge=lfs -text
+/tests/out/** filter=lfs diff=lfs merge=lfs -text

@@ -26,21 +26,18 @@ finally:
 @click.option("-r", "--resample", type=int, default=None)
 @click.option("-w", "--window-size", type=int, default=None)
 @click.option("-o", "--out", default="-")
-@click.option("--out-format", default="bedgraph")
 def _main(
         dataset1: str,
         dataset2: str,
         min_coverage: int,
         resample: int | None,
         window_size: int | None,
-        out: str,
-        out_format: str) \
+        out: str) \
         -> None:
     """Run the main application."""
     xs_path, ys_path = Path(dataset1), Path(dataset2)
     assert xs_path.exists(), f"no such path exists: {xs_path}"
     assert ys_path.exists(), f"no such path exists: {ys_path}"
-    assert out_format in ("bedgraph", "csv"), f"bad format: {out_format}"
     out = sys.stdout if out == "-" else Path(out).open("w")
     run_on_datasets(
         xs_path,
@@ -48,8 +45,7 @@ def _main(
         min_coverage,
         resample,
         window_size,
-        out,
-        out_format)
+        out)
 
 
 if __name__ == "__main__":
