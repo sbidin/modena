@@ -21,7 +21,6 @@ select = [
     "EM",  # Nice error messages.
     "ERA", # Detect commented-out code.
     "F",   # Pyflakes generic.
-    "FBT", # Boolean traps.
     "I",   # Unsorted import blocks.
     "ICN", # Import name conventions.
     "N",   # Naming.
@@ -47,7 +46,6 @@ ignore = [
     "B008", # Forbid `Depends(...)` in default values.
     "D203", # Blank line before class docstring.
     "D204", # Blank line after class docstring.
-    "FBT003", # Boolean trap.
     "D213",
     "DTZ003",
     "RET503",
