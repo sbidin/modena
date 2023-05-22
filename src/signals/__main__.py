@@ -24,7 +24,7 @@ finally:
 @click.argument("dataset2")
 @click.option("-c", "--min-coverage", type=int, default=5)
 @click.option("-r", "--resample", type=int, default=None)
-@click.option("--no-distance-sum", type=bool, default=False)
+@click.option("--no-distance-sum", is_flag=True, type=bool, default=False)
 @click.option("-o", "--out", default="-")
 def _main(
         dataset1: str,
