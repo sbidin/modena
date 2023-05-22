@@ -19,6 +19,10 @@ def distsum(
         if stat is not None:
             window.append(stat)
 
+    # No window? We're done. This happens if filters are too strict.
+    if not window:
+        return
+
     # Handle the prefix first as their left neighbours are incomplete.
     for i in range(window_size // 2):
         yield from _distsum_at(window, i)
