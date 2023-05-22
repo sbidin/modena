@@ -33,9 +33,13 @@ def run_on_datasets(
         min_coverage: int,
         resample: int | None,
         distance_sum: bool,
-        out: TextIO) \
+        out: TextIO,
+        random_seed: int | None) \
         -> None:
     """Run the application on provided datasets, outputing to a file."""
+    if random_seed is not None:
+        np.random.seed(random_seed)
+
     xs_path, ys_path, flipped = order_paths_by_size(xs_path, ys_path)
     xs, ys = index_datasets(xs_path, ys_path)
     if flipped: # Undo the order flip so the output doesn't get mirrored.
