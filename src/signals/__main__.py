@@ -24,14 +24,14 @@ finally:
 @click.argument("dataset2")
 @click.option("-c", "--min-coverage", type=int, default=5)
 @click.option("-r", "--resample", type=int, default=None)
-@click.option("-w", "--window-size", type=int, default=None)
+@click.option("--no-distance-sum", type=bool, default=False)
 @click.option("-o", "--out", default="-")
 def _main(
         dataset1: str,
         dataset2: str,
         min_coverage: int,
         resample: int | None,
-        window_size: int | None,
+        no_distance_sum: bool | None,
         out: str) \
         -> None:
     """Run the main application."""
@@ -44,7 +44,7 @@ def _main(
         ys_path,
         min_coverage,
         resample,
-        window_size,
+        not no_distance_sum,
         out)
 
 

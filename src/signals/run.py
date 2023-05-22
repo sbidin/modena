@@ -32,7 +32,7 @@ def run_on_datasets(
         ys_path: Path,
         min_coverage: int,
         resample: int | None,
-        window_size: int | None,
+        distance_sum: bool,
         out: TextIO) \
         -> None:
     """Run the application on provided datasets, outputing to a file."""
@@ -43,8 +43,8 @@ def run_on_datasets(
 
     pairs = concat_pairs(xs, ys, min_coverage, resample)
     stats = map(kuiper, pairs)
-    if window_size is not None:
-        stats = distsum(stats, window_size)
+    if distance_sum:
+        stats = distsum(stats, 5)
 
     # out.write("track ...") TODO: Do we need headers?
     for pos, dist in stats:
