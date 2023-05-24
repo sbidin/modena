@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import click
+import jenkspy
 
 from signals.run import run_on_datasets
 
@@ -41,7 +42,7 @@ def compare(
         out: str,
         random_seed: int | None) \
         -> None:
-    """Compare two datasets & output detailed statistics."""
+    """Compare two datasets & output an annotated BED file."""
     xs_path, ys_path = Path(dataset1), Path(dataset2)
     assert xs_path.exists(), f"no such path exists: {xs_path}"
     assert ys_path.exists(), f"no such path exists: {ys_path}"
@@ -57,9 +58,27 @@ def compare(
 
 
 @click.command()
-def jenks() -> None:
-    """Divide statistics into two separate sets by their score."""
-    print("jenks todo")
+@click.argument("bed_file")
+@click.option("-o", "--out", default="-")
+def jenks(bed_file: str, out: str) -> None:
+    """Assign positive/negative labels to an annotated BED file by score."""
+    path = Path(bed_file)
+    assert path.exists(), f"path {path} does not exist"
+    out = sys.stdout if out == "-" else Path(out).open("w")
+
+    # Read entire file.
+    with path.open() as f:
+        lines = [line.split() for line in f.read().splitlines()]
+
+    # Calculate breaks.
+    scores = sorted(-float(line[11]) for line in lines)
+    breaks = jenkspy.jenks_breaks(scores, n_classes=2)
+
+    # Assign labels and output.
+    for line in lines:
+        line.append("pos" if -float(line[11]) < breaks[1] else "neg")
+        out.write(" ".join(line))
+        out.write("\n")
 
 
 if __name__ == "__main__":
