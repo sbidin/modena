@@ -19,6 +19,11 @@ finally:
     log = logging.getLogger("signals")
 
 
+@click.group()
+def cli() -> None:
+    pass
+
+
 @click.command()
 @click.argument("dataset1")
 @click.argument("dataset2")
@@ -27,7 +32,7 @@ finally:
 @click.option("--no-distance-sum", is_flag=True, type=bool, default=False)
 @click.option("-o", "--out", default="-")
 @click.option("--random-seed", type=int, default=None)
-def _main(
+def compare(
         dataset1: str,
         dataset2: str,
         min_coverage: int,
@@ -36,7 +41,7 @@ def _main(
         out: str,
         random_seed: int | None) \
         -> None:
-    """Run the main application."""
+    """Compare two datasets & output detailed statistics."""
     xs_path, ys_path = Path(dataset1), Path(dataset2)
     assert xs_path.exists(), f"no such path exists: {xs_path}"
     assert ys_path.exists(), f"no such path exists: {ys_path}"
@@ -51,5 +56,13 @@ def _main(
         random_seed)
 
 
+@click.command()
+def jenks() -> None:
+    """Divide statistics into two separate sets by their score."""
+    print("jenks todo")
+
+
 if __name__ == "__main__":
-    _main()
+    cli.add_command(compare)
+    cli.add_command(jenks)
+    cli()
