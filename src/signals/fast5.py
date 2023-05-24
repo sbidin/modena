@@ -24,6 +24,7 @@ class Fast5:
     later on pick which files we actually want to process and in which order.
     """
     path: Path
+    is_rna: bool
     strand: str
     chrom: str
     start: int
@@ -42,8 +43,6 @@ class Fast5:
             if chrom is not None:
                 satisfies = satisfies and re.search(chrom, f.chrom) is not None
             if satisfies:
-                f.strand = None  # TODO: Do this better...
-                f.chrom = None
                 yield f
 
     @staticmethod
@@ -102,6 +101,8 @@ class Fast5:
         """Get all basic file contents that are useful to us."""
         tpl = f.get("Analyses/RawGenomeCorrected_000/BaseCalled_template")
         assert tpl, "missing BaseCalled_template"
+        is_rna = (tpl.attrs.get("rna"))
+        assert isinstance(is_rna, np.bool_), "missing BaseCalled_template.rna"
         aln = tpl.get("Alignment")
         assert aln, "missing Alignment"
         strand = aln.attrs.get("mapped_strand")
@@ -116,6 +117,7 @@ class Fast5:
         assert size > 0, "empty Events"
         yield Fast5(
             path=path,
+            is_rna=is_rna,
             strand=strand,
             chrom=chrom,
             start=start,
@@ -133,10 +135,12 @@ class Fast5:
             rds = f.get("Raw/Reads")
             rdn = list(rds.keys())
             sgn = rds[rdn[0]]["Signal"]
+            if self.is_rna:
+                sgn = np.flip(sgn)
             signal = (sgn[read_start_rel_to_raw:] - shift) / scale
             lengths = evt["length"]
             return signal, lengths
 
     def __repr__(self) -> str:
         """Get a simple Fast5 representation for debugging."""
-        return f"Fast5({self.path}, {self.start}-{self.end})"
+        return f"Fast5({self.path}, {self.start}-{self.end}, {'rna' if self.is_rna else 'dna'}, {self.strand}, {self.chrom})"
