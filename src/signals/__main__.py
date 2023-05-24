@@ -28,6 +28,8 @@ def cli() -> None:
 @click.command()
 @click.argument("dataset1")
 @click.argument("dataset2")
+@click.option("--strand", type=str, default=None)
+@click.option("--chrom", type=str, default=None)
 @click.option("-c", "--min-coverage", type=int, default=5)
 @click.option("-r", "--resample", type=int, default=10)
 @click.option("--no-distance-sum", is_flag=True, type=bool, default=False)
@@ -36,6 +38,8 @@ def cli() -> None:
 def compare(
         dataset1: str,
         dataset2: str,
+        strand: str | None,
+        chrom: str | None,
         min_coverage: int,
         resample: int,
         no_distance_sum: bool | None,
@@ -46,10 +50,13 @@ def compare(
     xs_path, ys_path = Path(dataset1), Path(dataset2)
     assert xs_path.exists(), f"no such path exists: {xs_path}"
     assert ys_path.exists(), f"no such path exists: {ys_path}"
+    assert strand in (None, "+", "-"), "--strand must be one of '+' or '-'"
     out = sys.stdout if out == "-" else Path(out).open("w")
     run_on_datasets(
         xs_path,
         ys_path,
+        strand,
+        chrom,
         min_coverage,
         resample if resample > 0 else None,
         not no_distance_sum,
@@ -61,7 +68,10 @@ def compare(
 @click.argument("bed_file")
 @click.option("-o", "--out", default="-")
 def jenks(bed_file: str, out: str) -> None:
-    """Assign positive/negative labels to an annotated BED file by score."""
+    """Assign positive/negative labels to an annotated BED file.
+
+    Note that this process can take a long time for very large datasets.
+    """
     path = Path(bed_file)
     assert path.exists(), f"path {path} does not exist"
     out = sys.stdout if out == "-" else Path(out).open("w")

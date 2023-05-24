@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from bisect import bisect_left
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -23,11 +24,30 @@ class Fast5:
     later on pick which files we actually want to process and in which order.
     """
     path: Path
+    strand: str
+    chrom: str
     start: int
     end: int
 
     @staticmethod
-    def from_path(path: Path) -> Iterator[Fast5]:
+    def from_path(path: Path, strand: str, chrom: str) -> Iterator[Fast5]:
+        """Yield all FAST5 files found under the given path.
+
+        Optionally allows filtering by strand or chromosome.
+        """
+        for f in Fast5._from_path(path):
+            satisfies = True
+            if strand is not None:
+                satisfies = satisfies and strand == f.strand
+            if chrom is not None:
+                satisfies = satisfies and re.search(chrom, f.chrom) is not None
+            if satisfies:
+                f.strand = None  # TODO: Do this better...
+                f.chrom = None
+                yield f
+
+    @staticmethod
+    def _from_path(path: Path) -> Iterator[Fast5]:
         """Yield all FAST5 files found under the given path."""
         if path.is_file():
             yield from Fast5._maybe_from_file_path(path)
@@ -63,7 +83,7 @@ class Fast5:
         signal = signal[self.positions[i]:self.positions[i] + length[i]]
 
         # Optionally performs resampling.
-        if resample is not None and resample != len(signal):
+        if resample > 0 and resample != len(signal):
             signal = np.random.choice(signal, size=resample, replace=True)
 
         return signal
@@ -85,14 +105,21 @@ class Fast5:
         aln = tpl.get("Alignment")
         assert aln, "missing Alignment"
         strand = aln.attrs.get("mapped_strand")
-        assert strand == "+", "strand not positive" # Note: probably remove this one?
+        assert strand, "missing Alignment.mapped_strand"
+        chrom = aln.attrs.get("mapped_chrom")
+        assert chrom, "missing Alignment.mapped_chrom"
+        start = aln.attrs.get("mapped_start")
+        assert isinstance(start, np.int64), "missing Alignment.mapped_start"
         evt = tpl.get("Events")
         assert evt, "missing Events"
-        start = aln.attrs.get("mapped_start")
-        assert isinstance(start, np.int64), "missing mapped_start"
         size = evt.shape[0]
         assert size > 0, "empty Events"
-        yield Fast5(path=path, start=start, end=start + size)
+        yield Fast5(
+            path=path,
+            strand=strand,
+            chrom=chrom,
+            start=start,
+            end=start + size)
 
     @cached_property
     def signal(self) -> tuple[np.ndarray, np.ndarray]:

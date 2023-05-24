@@ -30,6 +30,8 @@ def emit_line_bed_methyl(pos: int, dist: float, out: TextIO) -> None:
 def run_on_datasets(
         xs_path: Path,
         ys_path: Path,
+        strand: str,
+        chrom: str,
         min_coverage: int,
         resample: int | None,
         distance_sum: bool,
@@ -41,7 +43,7 @@ def run_on_datasets(
         np.random.seed(random_seed)
 
     xs_path, ys_path, flipped = order_paths_by_size(xs_path, ys_path)
-    xs, ys = index_datasets(xs_path, ys_path)
+    xs, ys = index_datasets(xs_path, ys_path, strand, chrom)
     if flipped: # Undo the order flip so the output doesn't get mirrored.
         xs, ys = ys, xs
 
@@ -55,16 +57,26 @@ def run_on_datasets(
         emit_line_bed_methyl(pos, dist, out)
 
 
-def index_datasets(xs_path: Path, ys_path: Path) -> tuple[list[Fast5], list[Fast5]]:
-    """Preload, filter and sort relevant dataset subsets."""
+def index_datasets(
+        xs_path: Path,
+        ys_path: Path,
+        strand: str | None,
+        chrom: str | None) \
+        -> tuple[list[Fast5], list[Fast5]]:
+    """Preload, filter and sort relevant dataset subsets.
+
+    Accepts strand and chromosome filters.
+    """
     # The first (and smaller) dataset's basic data is read fully and sorted by
     # position. The second dataset is read in a streaming fashion, unordered.
     # We skip any file from the second dataset whose positions do not overlap
     # with those of the first dataset.
-    xs = sorted(Fast5.from_path(xs_path), key=lambda x: (x.start, -x.end))
+    xs = Fast5.from_path(xs_path, strand, chrom)
+    xs = sorted(xs, key=lambda x: (x.start, -x.end))
+
     ys = []
     ys_orig_len = 0
-    for y in Fast5.from_path(ys_path):
+    for y in Fast5.from_path(ys_path, strand, chrom):
         ys_orig_len += 1
         if y.overlap(xs):
             ys.append(y)
