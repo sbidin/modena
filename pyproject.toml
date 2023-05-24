@@ -48,6 +48,7 @@ ignore = [
     "D204", # Blank line after class docstring.
     "D213",
     "DTZ003",
+    "PLR0913", # Too many arguments.
     "RET503",
     "RET504",
     "UP007",
