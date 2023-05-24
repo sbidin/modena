@@ -28,13 +28,13 @@ def cli() -> None:
 @click.command()
 @click.argument("dataset1")
 @click.argument("dataset2")
-@click.option("--strand", type=str, default=None)
-@click.option("--chrom", type=str, default=None)
-@click.option("-c", "--min-coverage", type=int, default=5)
-@click.option("-r", "--resample", type=int, default=10)
-@click.option("--no-distance-sum", is_flag=True, type=bool, default=False)
-@click.option("-o", "--out", default="-")
-@click.option("--random-seed", type=int, default=None)
+@click.option("--strand", type=str, default=None, help="Filter by strand, '+' or '-' (default none)")
+@click.option("--chrom", type=str, default=None, help="Filter by chromosome name regex (default none)")
+@click.option("-c", "--min-coverage", type=int, default=5, help="Skip positions with bad coverage (default 5)")
+@click.option("-r", "--resample", type=int, default=10, help="Resampled size; 0 to disable (default 10)")
+@click.option("-o", "--out", default="-", help="Output to a given path (default stdout)")
+@click.option("--no-distance-sum", is_flag=True, type=bool, default=False, help="Don't sum neighbour position distances")
+@click.option("--random-seed", type=int, default=None, help="Force a random seed, for reproducibility")
 def compare(
         dataset1: str,
         dataset2: str,
@@ -42,8 +42,8 @@ def compare(
         chrom: str | None,
         min_coverage: int,
         resample: int,
-        no_distance_sum: bool | None,
         out: str,
+        no_distance_sum: bool | None,
         random_seed: int | None) \
         -> None:
     """Compare two datasets & output an annotated BED file."""
@@ -66,9 +66,9 @@ def compare(
 
 @click.command()
 @click.argument("bed_file")
-@click.option("-o", "--out", default="-")
+@click.option("-o", "--out", default="-", help="Output to a given path (default stdout)")
 def jenks(bed_file: str, out: str) -> None:
-    """Assign positive/negative labels to an annotated BED file.
+    """Assign positive and negative labels to an annotated BED file.
 
     Note that this process can take a long time for very large datasets.
     """
