@@ -6,9 +6,10 @@ setup(
     python_requires=">=3.10",
     package_dir={"": "src"},
     install_requires=[
-        "click == 8.*",
         "astropy == 5.*",
+        "click == 8.*",
         "h5py == 3.*",
+        "jenkspy == 0.*",
         "scipy == 1.*",
     ],
     extras_require={'dev': [
