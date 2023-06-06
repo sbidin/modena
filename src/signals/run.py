@@ -37,6 +37,7 @@ def run_on_datasets(
         type: str,
         strand: str,
         chrom: str,
+        force_type: bool,
         min_coverage: int,
         resample: int,
         distance_sum: bool,
@@ -48,7 +49,7 @@ def run_on_datasets(
         np.random.seed(random_seed)
 
     xs_path, ys_path, flipped = order_paths_by_size(xs_path, ys_path)
-    xs, ys = index_datasets(xs_path, ys_path, type, strand, chrom)
+    xs, ys = index_datasets(xs_path, ys_path, type, strand, chrom, force_type)
     if flipped: # Undo the order flip so the output doesn't get mirrored.
         xs, ys = ys, xs
 
@@ -67,7 +68,8 @@ def index_datasets(
         ys_path: Path,
         type: str,
         strand: str | None,
-        chrom: str | None) \
+        chrom: str | None,
+        force_type: bool) \
         -> tuple[list[Fast5], list[Fast5]]:
     """Preload, filter and sort relevant dataset subsets.
 
@@ -77,7 +79,7 @@ def index_datasets(
     # position. The second dataset is read in a streaming fashion, unordered.
     # We skip any file from the second dataset whose positions do not overlap
     # with those of the first dataset.
-    xs = Fast5.from_path(xs_path, type, strand, chrom)
+    xs = Fast5.from_path(xs_path, type, strand, chrom, force_type)
     xs = sorted(xs, key=lambda x: (x.start, -x.end))
 
     if not xs:
@@ -86,7 +88,7 @@ def index_datasets(
 
     ys = []
     ys_orig_len = 0
-    for y in Fast5.from_path(ys_path, xs[0].type, xs[0].strand, fr"^{xs[0].chrom}$"):
+    for y in Fast5.from_path(ys_path, xs[0].type, xs[0].strand, fr"^{xs[0].chrom}$", force_type):
         ys_orig_len += 1
         if y.overlap(xs):
             ys.append(y)

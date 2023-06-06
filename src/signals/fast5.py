@@ -35,11 +35,12 @@ class Fast5:
             path: Path,
             type: str,
             strand: str,
-            chrom: str) \
+            chrom: str,
+            force_type: bool) \
             -> Iterator[Fast5]:
         """Yield all FAST5 files found under the given path.
 
-        Optionally allows filtering by strand or chromosome.
+        Optionally allows filtering by type, strand or chromosome.
         """
         # Only select one chromosome and strand -- skip others.
         type_selected = None
@@ -47,7 +48,7 @@ class Fast5:
         strand_selected = None
 
         log.debug(f"filtering files in {path}")
-        for f in Fast5._from_path(path):
+        for f in Fast5._from_path(path, forced_type=type if force_type else None):
             satisfies = True
             if type != "autodetect":
                 satisfies = satisfies and type == f.type
@@ -88,14 +89,14 @@ class Fast5:
             yield f
 
     @staticmethod
-    def _from_path(path: Path) -> Iterator[Fast5]:
+    def _from_path(path: Path, forced_type: str | None) -> Iterator[Fast5]:
         """Yield all FAST5 files found under the given path."""
         if path.is_file():
-            yield from Fast5._maybe_from_file_path(path)
+            yield from Fast5._maybe_from_file_path(path, forced_type)
             return
         for sub in path.glob("**/*.*"):
             if sub.name.lower().endswith(".fast5") and sub.is_file():
-                yield from Fast5._maybe_from_file_path(sub)
+                yield from Fast5._maybe_from_file_path(sub, forced_type)
 
     def overlap(self, fasts: list[Fast5]) -> Fast5 | None:
         """Return the first file whose positions overlap with self."""
@@ -130,24 +131,30 @@ class Fast5:
         return signal
 
     @staticmethod
-    def _maybe_from_file_path(path: Path) -> Iterator[Fast5]:
+    def _maybe_from_file_path(path: Path, forced_type: str | None) -> Iterator[Fast5]:
         """Attempt parsing the basics of a FAST5 file."""
         try:
             with h5py.File(path) as f:
-                yield from Fast5._parse_file(f, path)
+                yield from Fast5._parse_file(f, path, forced_type)
         except AssertionError as err:
             log.debug(f"skipped {path} due to {err}")
 
     @staticmethod
-    def _parse_file(f: h5py.File, path: Path) -> Iterator[Fast5]:
+    def _parse_file(f: h5py.File, path: Path, forced_type: str | None) -> Iterator[Fast5]:
         """Get all basic file contents that are useful to us."""
         tpl = f.get("Analyses/RawGenomeCorrected_000/BaseCalled_template")
         assert tpl, "missing BaseCalled_template"
+
+        # When RNA vs DNA information is missing, we can ignore this if forcing a type.
         is_rna = (tpl.attrs.get("rna"))
-        # TODO: Allow context_tags.experiment_type == "rna" also
-        # TODO: Autodedetect one type only, filter out other types and unknown types
-        # TODO: If given --type=rna or --type=dna, filter out other types and assume given type when unknown
-        assert isinstance(is_rna, np.bool_), "missing BaseCalled_template.rna"
+        if not isinstance(is_rna, np.bool_) and forced_type is not None:
+            is_rna = np.bool_(forced_type == "rna")
+        else:
+            # TODO: Allow context_tags.experiment_type == "rna" also
+            # TODO: Autodedetect one type only, filter out other types and unknown types
+            # TODO: If given --type=rna or --type=dna, filter out other types and assume given type when unknown
+            assert isinstance(is_rna, np.bool_), "missing BaseCalled_template.rna"
+
         aln = tpl.get("Alignment")
         assert aln, "missing Alignment"
         strand = aln.attrs.get("mapped_strand")
@@ -188,4 +195,4 @@ class Fast5:
 
     def __repr__(self) -> str:
         """Get a simple Fast5 representation for debugging."""
-        return f"Fast5({self.path}, {self.start}-{self.end}, {'rna' if self.is_rna else 'dna'}, {self.strand}, {self.chrom})"
+        return f"{self.type.upper()}[{self.chrom}{self.strand}]({self.path.name}, {self.start}-{self.end})"
