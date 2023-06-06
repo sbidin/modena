@@ -84,7 +84,7 @@ def index_datasets(
 
     ys = []
     ys_orig_len = 0
-    for y in Fast5.from_path(ys_path, strand, xs[0].chrom):
+    for y in Fast5.from_path(ys_path, xs[0].strand, xs[0].chrom):
         ys_orig_len += 1
         if y.overlap(xs):
             ys.append(y)

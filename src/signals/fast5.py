@@ -36,8 +36,9 @@ class Fast5:
 
         Optionally allows filtering by strand or chromosome.
         """
-        # Only select one chromosome -- we skip others.
+        # Only select one chromosome and strand -- skip others.
         chrom_selected = None
+        strand_selected = None
 
         for f in Fast5._from_path(path):
             satisfies = True
@@ -56,9 +57,18 @@ class Fast5:
                 log.debug(f"selected chromosome {chrom_selected}")
             elif chrom_selected != f.chrom:
                 log.debug(f"skipped {f.path} due to incompatible chromosome {f.chrom}")
-            else:
-                log.debug(f"selected {f.path}")
-                yield f
+                continue
+
+            # Similarly for strand -- don't compare across different strands.
+            if strand_selected is None:
+                strand_selected = f.strand
+                log.debug(f"selected strand {strand_selected}")
+            elif strand_selected != f.strand:
+                log.debug(f"skipped {f.path} due to incompatible strand {f.strand}")
+                continue
+
+            log.debug(f"selected {f.path}")
+            yield f
 
     @staticmethod
     def _from_path(path: Path) -> Iterator[Fast5]:
