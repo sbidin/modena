@@ -74,7 +74,7 @@ class Fast5:
             ps.append(ps[-1] + lengths[i])
         return ps
 
-    def signal_at(self, i: int, resample: int | None) -> np.ndarray:
+    def signal_at(self, i: int, resample: int) -> np.ndarray:
         """Return (optionally resampled) signal data at a certain position in the file."""
         signal, length = self.signal
         assert signal is not None, f"file {self.path} missing signal data"
@@ -134,7 +134,7 @@ class Fast5:
             scale = tpl.attrs.get("scale")
             rds = f.get("Raw/Reads")
             rdn = list(rds.keys())
-            sgn = rds[rdn[0]]["Signal"]
+            sgn = rds[rdn[0]]["Signal"][()]
             if self.is_rna:
                 sgn = np.flip(sgn)
             signal = (sgn[read_start_rel_to_raw:] - shift) / scale

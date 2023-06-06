@@ -58,7 +58,7 @@ def compare(
         strand,
         chrom,
         min_coverage,
-        resample if resample > 0 else None,
+        resample if resample > 0 else 0,
         not no_distance_sum,
         out,
         random_seed)

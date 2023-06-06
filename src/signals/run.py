@@ -33,7 +33,7 @@ def run_on_datasets(
         strand: str,
         chrom: str,
         min_coverage: int,
-        resample: int | None,
+        resample: int,
         distance_sum: bool,
         out: TextIO,
         random_seed: int | None) \

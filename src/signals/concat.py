@@ -23,7 +23,7 @@ def concat_pairs(
         xs: list[Fast5],
         ys: list[Fast5],
         min_coverage: int,
-        resample: int | None) \
+        resample: int) \
         -> Iterator[tuple[Signal, Signal]]:
     """Yield tuples of same-position concatenated signals."""
     xs = _concat(xs, min_coverage, resample)
@@ -44,7 +44,7 @@ def concat_pairs(
 def _concat(
         fasts: list[Fast5],
         min_coverage: int,
-        resample: int | None) \
+        resample: int) \
         -> Iterator[Signal]:
     """Yield concatenated signals from FAST5 files."""
     fasts.sort(key=lambda f: (f.start, f.end))
@@ -72,7 +72,7 @@ def _concat_range(
         start: int,
         end: int,
         min_coverage: int,
-        resample: int | None) \
+        resample: int) \
         -> Iterator[Signal]:
     """Yield concatenated signals for a range of positions."""
     # For each position...
