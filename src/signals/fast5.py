@@ -145,16 +145,6 @@ class Fast5:
         tpl = f.get("Analyses/RawGenomeCorrected_000/BaseCalled_template")
         assert tpl, "missing BaseCalled_template"
 
-        # When RNA vs DNA information is missing, we can ignore this if forcing a type.
-        is_rna = (tpl.attrs.get("rna"))
-        if not isinstance(is_rna, np.bool_) and forced_type is not None:
-            is_rna = np.bool_(forced_type == "rna")
-        else:
-            # TODO: Allow context_tags.experiment_type == "rna" also
-            # TODO: Autodedetect one type only, filter out other types and unknown types
-            # TODO: If given --type=rna or --type=dna, filter out other types and assume given type when unknown
-            assert isinstance(is_rna, np.bool_), "missing BaseCalled_template.rna"
-
         aln = tpl.get("Alignment")
         assert aln, "missing Alignment"
         strand = aln.attrs.get("mapped_strand")
@@ -167,6 +157,22 @@ class Fast5:
         assert evt, "missing Events"
         size = evt.shape[0]
         assert size > 0, "empty Events"
+
+        # Try to detect whether the file is DNA or RNA by checking a few attributes.
+        is_rna = tpl.attrs.get("rna")
+        if is_rna is None:
+            context_tags = f.get("UniqueGlobalKey/context_tags")
+            if context_tags:
+                experiment_type = context_tags.attrs.get("experiment_type")
+                if experiment_type is not None:
+                    is_rna = np.bool_(experiment_type == "rna")
+
+        # If we couldn't autodetect, but are forcing a type, then force the type.
+        if not isinstance(is_rna, np.bool_) and forced_type is not None:
+            is_rna = np.bool_(forced_type == "rna")
+
+        assert isinstance(is_rna, np.bool_), "missing BaseCalled_template.rna or UniqueGlobalKey.context_tags.experiment_type"
+
         yield Fast5(
             path=path,
             type="rna" if is_rna else "dna",
