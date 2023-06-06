@@ -15,7 +15,7 @@ from signals.run import run_on_datasets
         ("no-resample", 0, True),
     )
 )
-def test_default(suffix: str, resample: int | None, distsum: bool) -> None:
+def test_default(suffix: str, resample: int, distsum: bool) -> None:
     """CSV output equals output of old script."""
     out = StringIO()
     inp1, inp2 = Path("tests/inp/dna/1"), Path("tests/inp/dna/2")
