@@ -1,5 +1,7 @@
 """Exposes the `run_on_datasets` function."""
 
+import logging
+import sys
 from pathlib import Path
 from typing import TextIO
 
@@ -10,6 +12,8 @@ from signals.concat import Signal, concat_pairs
 from signals.distsum import distsum
 from signals.fast5 import Fast5
 from signals.helpers import order_paths_by_size
+
+log = logging.getLogger("signals")
 
 
 def emit_line_bed_methyl(pos: int, dist: float, out: TextIO) -> None:
@@ -74,12 +78,20 @@ def index_datasets(
     xs = Fast5.from_path(xs_path, strand, chrom)
     xs = sorted(xs, key=lambda x: (x.start, -x.end))
 
+    if not xs:
+        log.error(f"no valid files in {xs_path}")
+        sys.exit(1)
+
     ys = []
     ys_orig_len = 0
-    for y in Fast5.from_path(ys_path, strand, chrom):
+    for y in Fast5.from_path(ys_path, strand, xs[0].chrom):
         ys_orig_len += 1
         if y.overlap(xs):
             ys.append(y)
+
+    if not ys:
+        log.error(f"no valid files with chrom {xs[0].chrom} in {ys_path}")
+        sys.exit(1)
 
     # We then reverse the process: there are files from the first dataset that
     # never overlap with any of the ones from the second dataset. Get rid of
