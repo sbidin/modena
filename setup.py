@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="signals",
+    name="nodclust",
     version="0.0.1",
     python_requires=">=3.10",
     package_dir={"": "src"},

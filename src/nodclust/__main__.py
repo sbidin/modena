@@ -10,14 +10,14 @@ from pathlib import Path
 import click
 import jenkspy
 
-from signals.run import run_on_datasets
+from nodclust.run import run_on_datasets
 
 try:
     logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
 except ValueError:
     logging.basicConfig(level="INFO")
 finally:
-    log = logging.getLogger("signals")
+    log = logging.getLogger("nodclust")
 
 
 @click.group()

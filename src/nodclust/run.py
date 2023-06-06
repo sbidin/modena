@@ -8,12 +8,12 @@ from typing import TextIO
 import astropy.stats
 import numpy as np
 
-from signals.concat import Signal, concat_pairs
-from signals.distsum import distsum
-from signals.fast5 import Fast5
-from signals.helpers import order_paths_by_size
+from nodclust.concat import Signal, concat_pairs
+from nodclust.distsum import distsum
+from nodclust.fast5 import Fast5
+from nodclust.helpers import order_paths_by_size
 
-log = logging.getLogger("signals")
+log = logging.getLogger("nodclust")
 
 
 def emit_line_bed_methyl(

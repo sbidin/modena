@@ -4,7 +4,7 @@ from io import StringIO
 from pathlib import Path
 
 import pytest
-from signals.run import run_on_datasets
+from nodclust.run import run_on_datasets
 
 
 @pytest.mark.parametrize(

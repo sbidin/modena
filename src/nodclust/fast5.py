@@ -13,7 +13,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-log = logging.getLogger("signals")
+log = logging.getLogger("nodclust")
 
 
 @dataclass

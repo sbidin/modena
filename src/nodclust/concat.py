@@ -6,9 +6,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from signals.fast5 import Fast5
+from nodclust.fast5 import Fast5
 
-log = logging.getLogger("signals")
+log = logging.getLogger("nodclust")
 
 
 @dataclass

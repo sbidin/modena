@@ -1,6 +1,6 @@
 [tool.ruff]
 line-length = 100
-exclude = [".git", ".ruff_cache", "src/signals/__init__.py", "setup.py"]
+exclude = [".git", ".ruff_cache", "src/nodclust/__init__.py", "setup.py"]
 per-file-ignores = {}
 target-version = "py311"
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"

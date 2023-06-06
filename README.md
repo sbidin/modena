@@ -1,19 +1,28 @@
-# signals
+# nodclust
 
-TODO a more detailed description. Ivan neka ovdje uskoči.
+A nanopore-based computational method for detecting a wide spectrum of
+epigenetic/epitranscriptomic modifications.
 
-### Install and run via docker
-```shell
-$ docker build . -t signals # Build docker image.
-$ docker run -v `pwd`:`pwd` -w `pwd` --rm -it signals compare ./dataset/one ./and/two # Run.
-$ docker run --rm -it signals --help # See options.
-```
+This application is the implementation of an unsupervised approach for detecting
+a diverse range of epigenetic and epitranscriptomic modifications. Using a
+combination of the Kuiper test and Jenks 1D clustering, this method exhibits an
+average F1-score of 0.746, significantly outperforming rival methods whose
+average F1-scores fluctuate between 0.244 and 0.512. We depart from the common
+paradigm by using one-dimensional clustering to establish the classification
+threshold.
 
 ### Install and run locally
 ```shell
 $ python -m pip install -e . # Install.
-$ python -m signals compare path/to/dataset/one and/path/to/dataset/two # Run.
-$ python -m signals --help # See options.
+$ python -m nodclust compare path/to/dataset/one and/path/to/dataset/two # Run.
+$ python -m nodclust --help # See options.
+```
+
+### Install and run via docker
+```shell
+$ docker build . -t nodclust # Build docker image.
+$ docker run -v `pwd`:`pwd` -w `pwd` --rm -it nodclust compare ./dataset/one ./and/two # Run.
+$ docker run --rm -it nodclust --help # See options.
 ```
 
 ### Supported input formats
