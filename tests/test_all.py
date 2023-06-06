@@ -23,7 +23,7 @@ def test_default(suffix: str, resample: int, distsum: bool) -> None:
         inp1,
         inp2,
         "autodetect",
-        None,
+        "-",
         None,
         False,
         1,
