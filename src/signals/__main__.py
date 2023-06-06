@@ -28,13 +28,13 @@ def cli() -> None:
 @click.command()
 @click.argument("dataset1")
 @click.argument("dataset2")
-@click.option("--type", type=str, default="autodetect", help="Filter by type; dna or rna (default autodetect)")
-@click.option("--strand", type=str, default=None, help="Filter by strand, '+' or '-' (default picks first)")
-@click.option("--chrom", type=str, default=None, help="Filter by chromosome regex (default picks first)")
+@click.option("--type", type=str, default="autodetect", help="Filter by type; dna or rna")
+@click.option("--strand", type=str, default=None, help="Filter by strand, '+' or '-'")
+@click.option("--chrom", type=str, default=None, help="Filter by chromosome regex")
 @click.option("-c", "--min-coverage", type=int, default=5, help="Skip positions with bad coverage (default 5)")
-@click.option("-r", "--resample", type=int, default=10, help="Resampled size; 0 to disable (default 10)")
-@click.option("-o", "--out", default="-", help="Output to a given path (default stdout)")
-@click.option("--force-type", is_flag=True, type=bool, default=False, help="Assume untagged files are as specified with --type")
+@click.option("-r", "--resample", type=int, default=10, help="Resample size; 0 to disable (default 10)")
+@click.option("-o", "--out", default="-", help="Output to a given path")
+@click.option("--force-type", is_flag=True, type=bool, default=False, help="Force read files as specified by --type")
 @click.option("--no-distance-sum", is_flag=True, type=bool, default=False, help="Don't sum neighbour position distances")
 @click.option("--random-seed", type=int, default=None, help="Force a random seed, for reproducibility")
 def compare(
@@ -50,11 +50,13 @@ def compare(
         no_distance_sum: bool | None,
         random_seed: int | None) \
         -> None:
-    """Compare two datasets & output an annotated BED file."""
+    """Compare two datasets & output an annotated bedMethyl file."""
     xs_path, ys_path = Path(dataset1), Path(dataset2)
     assert xs_path.exists(), f"no such path exists: {xs_path}"
     assert ys_path.exists(), f"no such path exists: {ys_path}"
     assert type in ("dna", "rna", "autodetect"), "--type must be one of dna, rna or autodetect"
+    if force_type:
+        assert type != "autodetect", "cannot --force-type without specifying a --type"
     assert strand in (None, "+", "-"), "--strand must be one of '+' or '-'"
     out = sys.stdout if out == "-" else Path(out).open("w")
     run_on_datasets(
