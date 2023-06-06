@@ -16,19 +16,30 @@ from signals.helpers import order_paths_by_size
 log = logging.getLogger("signals")
 
 
-def emit_line_bed_methyl(pos: int, dist: float, out: TextIO) -> None:
+def emit_line_bed_methyl(
+        chrom: str,
+        strand: str,
+        pos: int,
+        dist: float,
+        out: TextIO) \
+        -> None:
     """Emit a single line in the bedMethly format."""
-    # Col 1 Reference chromosome or scaffold TODO, currently placeholder
-    # Col 4 Name of item TODO
-    # Col 5 Score from 0-1000. Capped number of reads TODO
-    # Col 6 Strandedness, plus (+), minus (-), or unknown (.) TODO proslijediti iz dataseta
-    # Col 7 Start of where display should be thick (start codon) TODO
-    # Col 8 End of where display should be thick (stop codon) TODO
-    # Col 9 Color value (RGB) TODO
-    # Col 10 Coverage, or number of reads TODO suma prvog i drugog dataseta?
-    # Col 11 Percentage of reads that show methylation at this position in the genome TODO
-    # Col 12+ su arbitrary i u njih stavljamo svoje ekstra things, trenutno distanca
-    out.write(f"c1 {pos + 1} {pos + 2} _ _ _ _ _ _ _ _ {dist:.5f}\n")
+    # The first 11 columns are defined by the bedMethyl format.
+    out.write(f"{chrom} ")  # col 1, reference chromosome
+    out.write(f"{pos + 1} ")  # col 2, position from
+    out.write(f"{pos + 2} ")  # col 3, position to
+    out.write("_ ")  # col 4, name of item
+    out.write("_ ")  # col 5, score from 1 to 1000, capped number of reads TODO
+    out.write(f"{strand} ") # col 6, strand
+    out.write("_ ")  # col 7, start of where display should be thick
+    out.write("_ ")  # col 8, end of where display should be thick
+    out.write("_ ")  # col 9, color value
+    out.write("_ ")  # col 10, coverage, or number of reads TODO
+    out.write("_ ")  # col 11, percentage of reads that show methylation at this position TODO
+
+    # All further columns are custom extensions of the format.
+    out.write(f"{dist:.5f}")  # col 12, kuiper distance
+    out.write("\n")
 
 
 def run_on_datasets(
@@ -53,14 +64,17 @@ def run_on_datasets(
     if flipped: # Undo the order flip so the output doesn't get mirrored.
         xs, ys = ys, xs
 
+    # Some metadata gets output once per every line.
+    chrom = xs[0].chrom
+    strand = xs[0].strand
+
     pairs = concat_pairs(xs, ys, min_coverage, resample)
     stats = map(kuiper, pairs)
     if distance_sum:
         stats = distsum(stats, 5)
 
-    # out.write("track ...") TODO: Do we need headers?
     for pos, dist in stats:
-        emit_line_bed_methyl(pos, dist, out)
+        emit_line_bed_methyl(chrom, strand, pos, dist, out)
 
 
 def index_datasets(
