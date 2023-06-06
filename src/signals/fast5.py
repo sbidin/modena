@@ -13,7 +13,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-log = logging.getLogger("signals.fast5")
+log = logging.getLogger("signals")
 
 
 @dataclass
@@ -36,13 +36,28 @@ class Fast5:
 
         Optionally allows filtering by strand or chromosome.
         """
+        # Only select one chromosome -- we skip others.
+        chrom_selected = None
+
         for f in Fast5._from_path(path):
             satisfies = True
             if strand is not None:
                 satisfies = satisfies and strand == f.strand
             if chrom is not None:
                 satisfies = satisfies and re.search(chrom, f.chrom) is not None
-            if satisfies:
+            if not satisfies:
+                continue
+
+            # If we encounter multiple chromosomes, there's a mixed dataset. We
+            # currently support only one chromosome at a time so it's up to the
+            # user to filter by a specific one.
+            if chrom_selected is None:
+                chrom_selected = f.chrom
+                log.debug(f"selected chromosome {chrom_selected}")
+            elif chrom_selected != f.chrom:
+                log.debug(f"skipped {f.path} due to incompatible chromosome {f.chrom}")
+            else:
+                log.debug(f"selected {f.path}")
                 yield f
 
     @staticmethod
@@ -94,7 +109,7 @@ class Fast5:
             with h5py.File(path) as f:
                 yield from Fast5._parse_file(f, path)
         except AssertionError as err:
-            log.debug(f"skipped file {path} because {err}")
+            log.debug(f"skipped {path} due to {err}")
 
     @staticmethod
     def _parse_file(f: h5py.File, path: Path) -> Iterator[Fast5]:
@@ -102,6 +117,9 @@ class Fast5:
         tpl = f.get("Analyses/RawGenomeCorrected_000/BaseCalled_template")
         assert tpl, "missing BaseCalled_template"
         is_rna = (tpl.attrs.get("rna"))
+        # TODO: Allow context_tags.experiment_type == "rna" also
+        # TODO: Autodedetect one type only, filter out other types and unknown types
+        # TODO: If given --type=rna or --type=dna, filter out other types and assume given type when unknown
         assert isinstance(is_rna, np.bool_), "missing BaseCalled_template.rna"
         aln = tpl.get("Alignment")
         assert aln, "missing Alignment"

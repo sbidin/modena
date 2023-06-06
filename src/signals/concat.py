@@ -8,7 +8,7 @@ import numpy as np
 
 from signals.fast5 import Fast5
 
-log = logging.getLogger("signals.concat")
+log = logging.getLogger("signals")
 
 
 @dataclass
