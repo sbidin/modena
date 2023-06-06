@@ -19,18 +19,17 @@ $ python -m signals --help # See options.
 ### Supported input formats
 Only single-FAST5 files processed by
 [tombo](https://nanoporetech.github.io/tombo/index.html) are supported. If your
-datasets haven't been processed by tombo already, follow these steps:
+input is in multi-FAST5 format, convert it to single-FAST5 by running the
+`multi_to_single_fast5` utility [available
+here](https://github.com/nanoporetech/ont_fast5_api). If your inputs don't
+contain basecalls, annotate them by running tombo's `preprocess
+annotate_raws_with_fastqs` subcommand [as shown
+here](https://nanoporetech.github.io/tombo/examples.html?highlight=annotate_raw_with_fastqs).
+Finally, make sure your inputs have been run through tombo's `resquiggle`
+command [as explained
+here](https://nanoporetech.github.io/tombo/examples.html?highlight=resquiggle).
 
-* If your input is in multi-FAST55 format, convert it to single-FAST5 by running
-  the `multi_to_single_fast5` utility [available
-  here](https://github.com/nanoporetech/ont_fast5_api).
-* If your inputs don't contain basecalls, annotate them by running tombo's
-  `preprocess annotate_raws_with_fastqs` subcommand [as shown
-  here](https://nanoporetech.github.io/tombo/examples.html?highlight=annotate_raw_with_fastqs).
-* Run your inputs through tombo's `resquiggle` command [as explained
-  here](https://nanoporetech.github.io/tombo/examples.html?highlight=resquiggle).
-
-As an example of the above, after installing tombo, run the following:
+As an example of the above, depending on your inputs, you might run the following:
 ```shell
 $ multi_to_single_fast5 --input_path path/multis --save_path path/singles --recursive
 $ tombo preprocess annotate_raws_with_fastqs --fast5-basedir path/singles --fastq-filenames reads.fastq
