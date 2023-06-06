@@ -24,29 +24,46 @@ class Fast5:
     later on pick which files we actually want to process and in which order.
     """
     path: Path
-    is_rna: bool
+    type: str
     strand: str
     chrom: str
     start: int
     end: int
 
     @staticmethod
-    def from_path(path: Path, strand: str, chrom: str) -> Iterator[Fast5]:
+    def from_path(
+            path: Path,
+            type: str,
+            strand: str,
+            chrom: str) \
+            -> Iterator[Fast5]:
         """Yield all FAST5 files found under the given path.
 
         Optionally allows filtering by strand or chromosome.
         """
         # Only select one chromosome and strand -- skip others.
+        type_selected = None
         chrom_selected = None
         strand_selected = None
 
+        log.debug(f"filtering files in {path}")
         for f in Fast5._from_path(path):
             satisfies = True
+            if type != "autodetect":
+                satisfies = satisfies and type == f.type
             if strand is not None:
                 satisfies = satisfies and strand == f.strand
             if chrom is not None:
                 satisfies = satisfies and re.search(chrom, f.chrom) is not None
             if not satisfies:
+                continue
+
+            # Don't compare RNA files to DNA files and vice-versa.
+            if type_selected is None:
+                type_selected = f.type
+                log.debug(f"selected type {type_selected}")
+            elif type_selected != f.type:
+                log.debug(f"skipped {f.path} due to incompatible type {f.type}")
                 continue
 
             # If we encounter multiple chromosomes, there's a mixed dataset. We
@@ -145,7 +162,7 @@ class Fast5:
         assert size > 0, "empty Events"
         yield Fast5(
             path=path,
-            is_rna=is_rna,
+            type="rna" if is_rna else "dna",
             strand=strand,
             chrom=chrom,
             start=start,
@@ -163,7 +180,7 @@ class Fast5:
             rds = f.get("Raw/Reads")
             rdn = list(rds.keys())
             sgn = rds[rdn[0]]["Signal"][()]
-            if self.is_rna:
+            if self.type == "rna":
                 sgn = np.flip(sgn)
             signal = (sgn[read_start_rel_to_raw:] - shift) / scale
             lengths = evt["length"]

@@ -28,8 +28,9 @@ def cli() -> None:
 @click.command()
 @click.argument("dataset1")
 @click.argument("dataset2")
-@click.option("--strand", type=str, default=None, help="Filter by strand, '+' or '-' (default none)")
-@click.option("--chrom", type=str, default=None, help="Filter by chromosome name regex (default none)")
+@click.option("--type", type=str, default="autodetect", help="Filter by type; dna or rna (default autodetect)")
+@click.option("--strand", type=str, default=None, help="Filter by strand, '+' or '-' (default picks first)")
+@click.option("--chrom", type=str, default=None, help="Filter by chromosome regex (default picks first)")
 @click.option("-c", "--min-coverage", type=int, default=5, help="Skip positions with bad coverage (default 5)")
 @click.option("-r", "--resample", type=int, default=10, help="Resampled size; 0 to disable (default 10)")
 @click.option("-o", "--out", default="-", help="Output to a given path (default stdout)")
@@ -38,6 +39,7 @@ def cli() -> None:
 def compare(
         dataset1: str,
         dataset2: str,
+        type: str,
         strand: str | None,
         chrom: str | None,
         min_coverage: int,
@@ -55,6 +57,7 @@ def compare(
     run_on_datasets(
         xs_path,
         ys_path,
+        type,
         strand,
         chrom,
         min_coverage,
