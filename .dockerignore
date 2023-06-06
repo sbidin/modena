@@ -9,8 +9,7 @@ __pycache__
 /pyproject.toml
 /.gitignore
 /docker-compose.yml
-/res/**/*.csv
+/res
 /.gitattributes
-/out
-/test
+/tests
 /.ruff_cache
