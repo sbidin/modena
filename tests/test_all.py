@@ -1,5 +1,6 @@
 """All tests."""
 
+from collections.abc import Iterator
 from io import StringIO
 from pathlib import Path
 
@@ -7,32 +8,39 @@ import pytest
 from nodclust.run import run_on_datasets
 
 
+def _param_combos() -> Iterator[tuple]:
+    """Get various combinations of test parameters."""
+    for path in Path("tests/out").glob("*.bed"):
+        name = path.name.split(".")
+        yield (
+            name[0],  # RNA or DNA.
+            int(name[1].split("-")[1]),  # Minimum coverage.
+            int(name[2].split("-")[1]))  # Resample size.
+
+
 @pytest.mark.parametrize(
-    ("suffix", "resample", "distsum"),
-    (
-        ("default", 10, True),
-        ("no-distsum", 10, False),
-        ("no-resample", 0, True),
-    )
-)
-def test_default(suffix: str, resample: int, distsum: bool) -> None:
-    """CSV output equals output of old script."""
-    out = StringIO()
-    inp1, inp2 = Path("tests/inp/dna/1"), Path("tests/inp/dna/2")
+    ("_type", "coverage", "resample"),
+    _param_combos())
+def test_output(_type: str, coverage: int, resample: int) -> None:
+    """Test that application output matches one on disk."""
+    out = StringIO()  # Will contain actual output.
     run_on_datasets(
-        inp1,
-        inp2,
-        "autodetect",
-        "-",
+        Path(f"tests/inp/{_type}-1"),
+        Path(f"tests/inp/{_type}-2"),
+        _type,
+        "+",  # Hardcoded to + because CI vs local can be non-deterministic.
         None,
-        False,
-        1,
+        True,
+        coverage,
         resample,
-        distsum,
+        True,  # Always do distance summing.
         out,
-        random_seed=42)
-    out = out.getvalue()
-    with open(f"tests/out/dna/out.{suffix}.bed") as f:
+        random_seed=42)  # Needed to make the test deterministic.
+
+    # Read expected output.
+    with open(f"tests/out/{_type}.coverage-{coverage}.resample-{resample}.bed") as f:
         exp = f.read()
-    for a, b in zip(out.splitlines(), exp.splitlines(), strict=False):
+
+    # Compare expected with actual output.
+    for a, b in zip(out.getvalue().splitlines(), exp.splitlines(), strict=False):
         assert a == b, "output mismatch"
