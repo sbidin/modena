@@ -24,34 +24,34 @@ class Fast5:
     later on pick which files we actually want to process and in which order.
     """
     path: Path
-    type: str
+    acid: str
     strand: str
-    chrom: str
+    chromosome: str
     start: int
     end: int
 
     @staticmethod
     def from_path(
             path: Path,
-            type: str,
+            acid: str,
             strand: str,
-            chrom: str,
-            force_type: bool) \
+            chromosome: str,
+            force_acid: bool) \
             -> Iterator[Fast5]:
         """Yield all FAST5 files found under the given path.
 
         Optionally allows filtering by type, strand or chromosome.
         """
         # Only select one chromosome and strand -- skip others.
-        type_selected = None
-        chrom_selected = None
+        acid_selected = None
+        chromosome_selected = None
         strand_selected = None
 
         log.debug(f"filtering files in {path}")
-        for f in Fast5._from_path(path, forced_type=type if force_type else None):
+        for f in Fast5._from_path(path, forced_acid=acid if force_acid else None):
             # Must match desired type.
-            if type != "autodetect" and type != f.type:
-                log.debug(f"skipped {f.path} because it's not of type {type}")
+            if acid != "autodetect" and acid != f.acid:
+                log.debug(f"skipped {f.path} because it's not of acid {acid}")
                 continue
 
             # Must match desired strand.
@@ -60,26 +60,26 @@ class Fast5:
                 continue
 
             # Must match desired chromosome.
-            if chrom is not None and re.search(chrom, f.chrom) is None:
-                log.debug(f"skipped {f.path} because it's not of chromosome {chrom}")
+            if chromosome is not None and re.search(chromosome, f.chromosome) is None:
+                log.debug(f"skipped {f.path} because it's not of chromosome {chromosome}")
                 continue
 
             # Don't compare RNA files to DNA files and vice-versa.
-            if type_selected is None:
-                type_selected = f.type
-                log.debug(f"selected type {type_selected}")
-            elif type_selected != f.type:
-                log.debug(f"skipped {f.path} due to incompatible type {f.type}")
+            if acid_selected is None:
+                acid_selected = f.acid
+                log.debug(f"selected acid {acid_selected}")
+            elif acid_selected != f.acid:
+                log.debug(f"skipped {f.path} due to incompatible acid {f.acid}")
                 continue
 
             # If we encounter multiple chromosomes, there's a mixed dataset. We
             # currently support only one chromosome at a time so it's up to the
             # user to filter by a specific one.
-            if chrom_selected is None:
-                chrom_selected = f.chrom
-                log.debug(f"selected chromosome {chrom_selected}")
-            elif chrom_selected != f.chrom:
-                log.debug(f"skipped {f.path} due to incompatible chromosome {f.chrom}")
+            if chromosome_selected is None:
+                chromosome_selected = f.chromosome
+                log.debug(f"selected chromosome {chromosome_selected}")
+            elif chromosome_selected != f.chromosome:
+                log.debug(f"skipped {f.path} due to incompatible chromosome {f.chromosome}")
                 continue
 
             # Similarly for strand -- don't compare across different strands.
@@ -94,14 +94,14 @@ class Fast5:
             yield f
 
     @staticmethod
-    def _from_path(path: Path, forced_type: str | None) -> Iterator[Fast5]:
+    def _from_path(path: Path, forced_acid: str | None) -> Iterator[Fast5]:
         """Yield all FAST5 files found under the given path."""
         if path.is_file():  # If given a single file, just return it.
-            yield from Fast5._maybe_from_file_path(path, forced_type)
+            yield from Fast5._maybe_from_file_path(path, forced_acid)
             return
         for sub in sorted(path.rglob("*.*")):  # Need to sort, otherwise non-deterministic.
             if re.match(r"^.*\.fast5$", sub.name, flags=re.IGNORECASE) and sub.is_file():
-                yield from Fast5._maybe_from_file_path(sub, forced_type)
+                yield from Fast5._maybe_from_file_path(sub, forced_acid)
 
     def overlap(self, fasts: list[Fast5]) -> Fast5 | None:
         """Return the first file whose positions overlap with self."""
@@ -136,16 +136,16 @@ class Fast5:
         return signal
 
     @staticmethod
-    def _maybe_from_file_path(path: Path, forced_type: str | None) -> Iterator[Fast5]:
+    def _maybe_from_file_path(path: Path, forced_acid: str | None) -> Iterator[Fast5]:
         """Attempt parsing the basics of a FAST5 file."""
         try:
             with h5py.File(path) as f:
-                yield from Fast5._parse_file(f, path, forced_type)
+                yield from Fast5._parse_file(f, path, forced_acid)
         except AssertionError as err:
             log.debug(f"skipped {path} due to {err}")
 
     @staticmethod
-    def _parse_file(f: h5py.File, path: Path, forced_type: str | None) -> Iterator[Fast5]:
+    def _parse_file(f: h5py.File, path: Path, forced_acid: str | None) -> Iterator[Fast5]:
         """Get all basic file contents that are useful to us."""
         tpl = f.get("Analyses/RawGenomeCorrected_000/BaseCalled_template")
         assert tpl, "missing BaseCalled_template"
@@ -154,8 +154,8 @@ class Fast5:
         assert aln, "missing Alignment"
         strand = aln.attrs.get("mapped_strand")
         assert strand, "missing Alignment.mapped_strand"
-        chrom = aln.attrs.get("mapped_chrom")
-        assert chrom, "missing Alignment.mapped_chrom"
+        chromosome = aln.attrs.get("mapped_chrom")
+        assert chromosome, "missing Alignment.mapped_chrom"
         start = aln.attrs.get("mapped_start")
         assert isinstance(start, np.int64), "missing Alignment.mapped_start"
         evt = tpl.get("Events")
@@ -173,16 +173,16 @@ class Fast5:
                     is_rna = np.bool_(experiment_type == "rna")
 
         # If we couldn't autodetect, but are forcing a type, then force the type.
-        if not isinstance(is_rna, np.bool_) and forced_type is not None:
-            is_rna = np.bool_(forced_type == "rna")
+        if not isinstance(is_rna, np.bool_) and forced_acid is not None:
+            is_rna = np.bool_(forced_acid == "rna")
 
         assert isinstance(is_rna, np.bool_), "missing BaseCalled_template.rna or UniqueGlobalKey.context_tags.experiment_type"
 
         yield Fast5(
             path=path,
-            type="rna" if is_rna else "dna",
+            acid="rna" if is_rna else "dna",
             strand=strand,
-            chrom=chrom,
+            chromosome=chromosome,
             start=start,
             end=start + size)
 
@@ -198,7 +198,7 @@ class Fast5:
             rds = f.get("Raw/Reads")
             rdn = list(rds.keys())
             sgn = rds[rdn[0]]["Signal"][()]
-            if self.type == "rna":
+            if self.acid == "rna":
                 sgn = np.flip(sgn)
             signal = (sgn[read_start_rel_to_raw:] - shift) / scale
             lengths = evt["length"]
@@ -206,4 +206,4 @@ class Fast5:
 
     def __repr__(self) -> str:
         """Get a simple Fast5 representation for debugging."""
-        return f"{self.type.upper()}[{self.chrom}{self.strand}]({self.path.name}, {self.start}-{self.end})"
+        return f"{self.acid.upper()}[{self.chromosome}{self.strand}]({self.path.name}, {self.start}-{self.end})"

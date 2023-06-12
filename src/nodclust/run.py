@@ -17,7 +17,7 @@ log = logging.getLogger("nodclust")
 
 
 def emit_line_bed_methyl(
-        chrom: str,
+        chromosome: str,
         strand: str,
         pos: int,
         dist: float,
@@ -25,7 +25,7 @@ def emit_line_bed_methyl(
         -> None:
     """Emit a single line in the bedMethly format."""
     # The first 11 columns are defined by the bedMethyl format.
-    out.write(f"{chrom} ")  # col 1, reference chromosome
+    out.write(f"{chromosome} ")  # col 1, reference chromosome
     out.write(f"{pos + 1} ")  # col 2, position from
     out.write(f"{pos + 2} ")  # col 3, position to
     out.write("_ ")  # col 4, name of item
@@ -45,10 +45,12 @@ def emit_line_bed_methyl(
 def run_on_datasets(
         xs_path: Path,
         ys_path: Path,
-        type: str,
+        acid: str,
         strand: str | None,
-        chrom: str | None,
-        force_type: bool,
+        chromosome: str | None,
+        from_position: int | None,
+        to_position: int | None,
+        force_acid: bool,
         min_coverage: int,
         resample: int,
         distance_sum: bool,
@@ -60,11 +62,10 @@ def run_on_datasets(
         np.random.seed(random_seed)
 
     xs_path, ys_path = order_paths_by_size(xs_path, ys_path)
-    xs, ys = index_datasets(xs_path, ys_path, type, strand, chrom, force_type)
+    xs, ys = index_datasets(xs_path, ys_path, acid, strand, chromosome, force_acid)
 
     # Some metadata gets output once per every line.
-    chrom = xs[0].chrom
-    strand = xs[0].strand
+    chromosome, strand = xs[0].chromosome, xs[0].strand
 
     pairs = concat_pairs(xs, ys, min_coverage, resample)
     stats = map(kuiper, pairs)
@@ -72,16 +73,16 @@ def run_on_datasets(
         stats = distsum(stats, 5)
 
     for pos, dist in stats:
-        emit_line_bed_methyl(chrom, strand, pos, dist, out)
+        emit_line_bed_methyl(chromosome, strand, pos, dist, out)
 
 
 def index_datasets(
         xs_path: Path,
         ys_path: Path,
-        type: str,
+        acid: str,
         strand: str | None,
-        chrom: str | None,
-        force_type: bool) \
+        chromosome: str | None,
+        force_acid: bool) \
         -> tuple[list[Fast5], list[Fast5]]:
     """Preload, filter and sort relevant dataset subsets.
 
@@ -91,7 +92,7 @@ def index_datasets(
     # position. The second dataset is read in a streaming fashion, unordered.
     # We skip any file from the second dataset whose positions do not overlap
     # with those of the first dataset.
-    xs = Fast5.from_path(xs_path, type, strand, chrom, force_type)
+    xs = Fast5.from_path(xs_path, acid, strand, chromosome, force_acid)
     xs = sorted(xs, key=lambda x: (x.start, -x.end))
 
     if not xs:
@@ -100,7 +101,7 @@ def index_datasets(
 
     ys = []
     ys_orig_len = 0
-    for y in Fast5.from_path(ys_path, xs[0].type, xs[0].strand, fr"^{xs[0].chrom}$", force_type):
+    for y in Fast5.from_path(ys_path, xs[0].acid, xs[0].strand, fr"^{xs[0].chromosome}$", force_acid):
         ys_orig_len += 1
         if y.overlap(xs):
             ys.append(y)

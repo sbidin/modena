@@ -19,16 +19,18 @@ def _param_combos() -> Iterator[tuple]:
 
 
 @pytest.mark.parametrize(
-    ("_type", "coverage", "resample"),
+    ("acid", "coverage", "resample"),
     _param_combos())
-def test_output(_type: str, coverage: int, resample: int) -> None:
+def test_output(acid: str, coverage: int, resample: int) -> None:
     """Test that application output matches one on disk."""
     out = StringIO()  # Will contain actual output.
     run_on_datasets(
-        Path(f"tests/inp/{_type}-1"),
-        Path(f"tests/inp/{_type}-2"),
-        _type,
+        Path(f"tests/inp/{acid}-1"),
+        Path(f"tests/inp/{acid}-2"),
+        acid,
         "+",  # Hardcoded to + because CI vs local can be non-deterministic.
+        None,
+        None,
         None,
         True,
         coverage,
@@ -38,7 +40,7 @@ def test_output(_type: str, coverage: int, resample: int) -> None:
         random_seed=42)  # Needed to make the test deterministic.
 
     # Read expected output.
-    with open(f"tests/out/{_type}.coverage-{coverage}.resample-{resample}.bed") as f:
+    with open(f"tests/out/{acid}.coverage-{coverage}.resample-{resample}.bed") as f:
         exp = f.read()
 
     # Compare expected with actual output.
