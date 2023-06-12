@@ -54,14 +54,16 @@ Usage: nodclust compare [OPTIONS] DATASET1 DATASET2
   Compare two datasets & output an annotated bedMethyl file.
 
 Options:
-  --type TEXT                 Filter by type; dna or rna
-  --strand TEXT               Filter by strand, '+' or '-'
-  --chrom TEXT                Filter by chromosome regex
-  -c, --min-coverage INTEGER  Skip positions with bad coverage (default 5)
-  -r, --resample INTEGER      Resample size; 0 to disable (default 10)
-  -o, --out TEXT              Output to a given path
-  --force-type                Force read files as specified by --type
-  --no-distance-sum           Don't sum neighbour position distances
-  --random-seed INTEGER       Force a random seed, for reproducibility
-  --help                      Show this message and exit.
+  -a, --acid TEXT              Filter by acid, dna or rna
+  --force-acid                 Force read files as specified by --acid
+  -s, --strand TEXT            Filter by strand, '+' or '-'
+  -c, --chromosome TEXT        Filter by chromosome regex
+  -f, --from-position INTEGER  Filter by minimum position (inclusive)
+  -t, --to-position INTEGER    Filter by maximum position (inclusive)
+  -m, --min-coverage INTEGER   Filter by minimum coverage (default 5)
+  -r, --resample-size INTEGER  Signal resample size; 0 to disable (default 10)
+  -o, --out TEXT               Output to a given path
+  --no-distance-sum            Don't sum neighbour position distances
+  --random-seed INTEGER        Force a random seed, for reproducibility
+  --help                       Show this message and exit.
 ```
