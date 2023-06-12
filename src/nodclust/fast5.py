@@ -91,11 +91,11 @@ class Fast5:
     @staticmethod
     def _from_path(path: Path, forced_type: str | None) -> Iterator[Fast5]:
         """Yield all FAST5 files found under the given path."""
-        if path.is_file():
+        if path.is_file():  # If given a single file, just return it.
             yield from Fast5._maybe_from_file_path(path, forced_type)
             return
-        for sub in path.glob("**/*.*"):
-            if sub.name.lower().endswith(".fast5") and sub.is_file():
+        for sub in sorted(path.rglob("*.*")):  # Need to sort, otherwise non-deterministic.
+            if re.match(r"^.*\.fast5$", sub.name, flags=re.IGNORECASE) and sub.is_file():
                 yield from Fast5._maybe_from_file_path(sub, forced_type)
 
     def overlap(self, fasts: list[Fast5]) -> Fast5 | None:
