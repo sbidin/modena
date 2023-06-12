@@ -49,14 +49,19 @@ class Fast5:
 
         log.debug(f"filtering files in {path}")
         for f in Fast5._from_path(path, forced_type=type if force_type else None):
-            satisfies = True
-            if type != "autodetect":
-                satisfies = satisfies and type == f.type
-            if strand is not None:
-                satisfies = satisfies and strand == f.strand
-            if chrom is not None:
-                satisfies = satisfies and re.search(chrom, f.chrom) is not None
-            if not satisfies:
+            # Must match desired type.
+            if type != "autodetect" and type != f.type:
+                log.debug(f"skipped {f.path} because it's not of type {type}")
+                continue
+
+            # Must match desired strand.
+            if strand is not None and strand != f.strand:
+                log.debug(f"skipped {f.path} because it's not of strand {strand}")
+                continue
+
+            # Must match desired chromosome.
+            if chrom is not None and re.search(chrom, f.chrom) is None:
+                log.debug(f"skipped {f.path} because it's not of chromosome {chrom}")
                 continue
 
             # Don't compare RNA files to DNA files and vice-versa.
