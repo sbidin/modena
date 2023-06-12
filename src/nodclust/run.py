@@ -106,7 +106,7 @@ def index_datasets(
             ys.append(y)
 
     if not ys:
-        log.error(f"no valid files with chrom {xs[0].chrom} in {ys_path}")
+        log.error(f"no selected files from {xs_path} overlap those in {ys_path}")
         sys.exit(1)
 
     # We then reverse the process: there are files from the first dataset that
