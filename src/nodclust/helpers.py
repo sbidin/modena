@@ -14,7 +14,7 @@ def size_at_path(path: Path) -> int:
         return size
     except:
         # We don't have access to size information so just make it consistent.
-        return hashlib.md5(str(path).encode()).digest()[0]
+        return hashlib.md5(str(path).encode()).digest()[0] + 1
 
 
 def order_paths_by_size(a: Path, b: Path) -> tuple[Path, Path]:
