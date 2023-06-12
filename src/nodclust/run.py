@@ -61,18 +61,36 @@ def run_on_datasets(
     if random_seed is not None:
         np.random.seed(random_seed)
 
+    # Index the datasets by overlapping ranges of positions.
     xs_path, ys_path = order_paths_by_size(xs_path, ys_path)
-    xs, ys = index_datasets(xs_path, ys_path, acid, strand, chromosome, force_acid)
+    xs, ys = index_datasets(
+        xs_path,
+        ys_path,
+        acid,
+        strand,
+        chromosome,
+        force_acid,
+        from_position,
+        to_position)
 
     # Some metadata gets output once per every line.
     chromosome, strand = xs[0].chromosome, xs[0].strand
 
-    pairs = concat_pairs(xs, ys, min_coverage, resample)
+    # Get Kuiper values for each position signal pair.
+    pairs = concat_pairs(xs, ys, min_coverage, resample, from_position, to_position)
     stats = map(kuiper, pairs)
     if distance_sum:
         stats = distsum(stats, 5)
 
+    # Output the resulting BED file.
     for pos, dist in stats:
+
+        # Skip outputting undesired positions. We have some extra due to
+        # distance summing with neighbours.
+        if from_position is not None and pos + 1 < from_position or \
+           to_position is not None and to_position < pos + 1:
+            continue
+
         emit_line_bed_methyl(chromosome, strand, pos, dist, out)
 
 
@@ -82,7 +100,9 @@ def index_datasets(
         acid: str,
         strand: str | None,
         chromosome: str | None,
-        force_acid: bool) \
+        force_acid: bool,
+        from_position: int | None,
+        to_position: int | None) \
         -> tuple[list[Fast5], list[Fast5]]:
     """Preload, filter and sort relevant dataset subsets.
 
@@ -92,7 +112,14 @@ def index_datasets(
     # position. The second dataset is read in a streaming fashion, unordered.
     # We skip any file from the second dataset whose positions do not overlap
     # with those of the first dataset.
-    xs = Fast5.from_path(xs_path, acid, strand, chromosome, force_acid)
+    xs = Fast5.from_path(
+        xs_path,
+        acid,
+        strand,
+        chromosome,
+        force_acid,
+        from_position,
+        to_position)
     xs = sorted(xs, key=lambda x: (x.start, -x.end))
 
     if not xs:
@@ -101,7 +128,14 @@ def index_datasets(
 
     ys = []
     ys_orig_len = 0
-    for y in Fast5.from_path(ys_path, xs[0].acid, xs[0].strand, fr"^{xs[0].chromosome}$", force_acid):
+    for y in Fast5.from_path(
+            ys_path,
+            xs[0].acid,
+            xs[0].strand,
+            fr"^{xs[0].chromosome}$",
+            force_acid,
+            from_position,
+            to_position):
         ys_orig_len += 1
         if y.overlap(xs):
             ys.append(y)

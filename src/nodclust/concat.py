@@ -23,11 +23,13 @@ def concat_pairs(
         xs: list[Fast5],
         ys: list[Fast5],
         min_coverage: int,
-        resample: int) \
+        resample: int,
+        from_position: int | None,
+        to_position: int | None) \
         -> Iterator[tuple[Signal, Signal]]:
     """Yield tuples of same-position concatenated signals."""
-    xs = _concat(xs, min_coverage, resample)
-    ys = _concat(ys, min_coverage, resample)
+    xs = _concat(xs, min_coverage, resample, from_position, to_position)
+    ys = _concat(ys, min_coverage, resample, from_position, to_position)
     x, y = next(xs, None), next(ys, None)
     while True:
         if x is None or y is None:
@@ -44,7 +46,9 @@ def concat_pairs(
 def _concat(
         fasts: list[Fast5],
         min_coverage: int,
-        resample: int) \
+        resample: int,
+        from_position: int | None,
+        to_position: int | None) \
         -> Iterator[Signal]:
     """Yield concatenated signals from FAST5 files."""
     fasts.sort(key=lambda f: (f.start, f.end))
@@ -60,7 +64,14 @@ def _concat(
         overlap = fasts[i:j]
         start = max(start, f.start)
         if start < f.end and j - i >= min_coverage:
-            yield from _concat_range(overlap, start, f.end, min_coverage, resample)
+            yield from _concat_range(
+                overlap,
+                start,
+                f.end,
+                min_coverage,
+                resample,
+                from_position,
+                to_position)
         start = max(start, f.end)
 
         # Get rid of the processed range.
@@ -72,11 +83,21 @@ def _concat_range(
         start: int,
         end: int,
         min_coverage: int,
-        resample: int) \
+        resample: int,
+        from_position: int | None,
+        to_position: int | None) \
         -> Iterator[Signal]:
     """Yield concatenated signals for a range of positions."""
     # For each position...
     for i in range(start, end):
+
+        # Skip positions outside the desired range. However, still include at
+        # least window size positions around the desired range, since this is
+        # important for purposes of distance summing.
+        if from_position is not None and from_position - 5 > i + 1 or \
+           to_position is not None and i + 1 > to_position + 5:
+            continue
+
         signal = Signal(position=i, coverage=0, data=[])
 
         # For each file containing this position...

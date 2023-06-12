@@ -34,9 +34,11 @@ class Fast5:
     def from_path(
             path: Path,
             acid: str,
-            strand: str,
-            chromosome: str,
-            force_acid: bool) \
+            strand: str | None,
+            chromosome: str | None,
+            force_acid: bool,
+            from_position: int | None,
+            to_position: int | None) \
             -> Iterator[Fast5]:
         """Yield all FAST5 files found under the given path.
 
@@ -62,6 +64,16 @@ class Fast5:
             # Must match desired chromosome.
             if chromosome is not None and re.search(chromosome, f.chromosome) is None:
                 log.debug(f"skipped {f.path} because it's not of chromosome {chromosome}")
+                continue
+
+            # Range must be above minimum position.
+            if from_position is not None and from_position > f.end + 1:
+                log.debug(f"skipped {f.path} because its range is below position {from_position}")
+                continue
+
+            # Range must be below maximum position.
+            if to_position is not None and to_position < f.start + 1:
+                log.debug(f"skipped {f.path} because its range is above position {to_position}")
                 continue
 
             # Don't compare RNA files to DNA files and vice-versa.

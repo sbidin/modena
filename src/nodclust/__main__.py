@@ -68,6 +68,8 @@ def compare(
         assert from_position >= 0, "--from-position must be at least zero"
     if to_position is not None:
         assert to_position >= 0, "--from-position must be at least zero"
+    if from_position is not None and to_position is not None:
+        assert from_position <= to_position, "--from-position must be below or equal to --to-position"
 
     out = sys.stdout if out == "-" else Path(out).open("w")
     run_on_datasets(
@@ -76,9 +78,9 @@ def compare(
         acid,
         strand,
         chromosome,
-        force_acid,
         from_position,
         to_position,
+        force_acid,
         min_coverage,
         resample_size if resample_size > 0 else 0,
         not no_distance_sum,
