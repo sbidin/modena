@@ -59,10 +59,8 @@ def run_on_datasets(
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    xs_path, ys_path, flipped = order_paths_by_size(xs_path, ys_path)
+    xs_path, ys_path = order_paths_by_size(xs_path, ys_path)
     xs, ys = index_datasets(xs_path, ys_path, type, strand, chrom, force_type)
-    if flipped: # Undo the order flip so the output doesn't get mirrored.
-        xs, ys = ys, xs
 
     # Some metadata gets output once per every line.
     chrom = xs[0].chrom
