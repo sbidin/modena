@@ -11,7 +11,6 @@ import numpy as np
 from nodclust.concat import Signal, concat_pairs
 from nodclust.distsum import distsum
 from nodclust.fast5 import Fast5
-from nodclust.helpers import order_paths_by_size
 
 log = logging.getLogger("nodclust")
 
@@ -59,18 +58,19 @@ def run_on_datasets(
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    xs_path, ys_path = order_paths_by_size(xs_path, ys_path)
     xs, ys = index_datasets(xs_path, ys_path, type, strand, chrom, force_type)
 
-    # Some metadata gets output once per every line.
-    chrom = xs[0].chrom
-    strand = xs[0].strand
+    # Some metadata gets output once per every line. We store it here since
+    # otherwise it'll get deleted during the process below.
+    chrom, strand = xs[0].chrom, xs[0].strand
 
+    # Get dist-summed Kuiper statistics for pairs of positions' signals.
     pairs = concat_pairs(xs, ys, min_coverage, resample)
     stats = map(kuiper, pairs)
     if distance_sum:
         stats = distsum(stats, 5)
 
+    # Output the BED file.
     for pos, dist in stats:
         emit_line_bed_methyl(chrom, strand, pos, dist, out)
 
