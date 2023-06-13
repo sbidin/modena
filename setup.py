@@ -6,11 +6,11 @@ setup(
     python_requires=">=3.10",
     package_dir={"": "src"},
     install_requires=[
-        "astropy == 5.2.2",
+        "astropy == 5.3",
         "click == 8.1.3",
-        "h5py == 3.7.0",
+        "h5py == 3.8.0",
         "jenkspy == 0.3.2",
-        "scipy == 1.10.0",
+        "scipy == 1.10.1",
     ],
     extras_require={'dev': [
         'pytest == 7.2.2',
