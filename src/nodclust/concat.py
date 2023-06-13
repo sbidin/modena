@@ -6,7 +6,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from nodclust.config import Config
 from nodclust.fast5 import Fast5
+from nodclust.helpers import position_within_bounds
 
 log = logging.getLogger("nodclust")
 
@@ -22,14 +24,10 @@ class Signal:
 def concat_pairs(
         xs: list[Fast5],
         ys: list[Fast5],
-        min_coverage: int,
-        resample: int,
-        from_position: int | None,
-        to_position: int | None) \
+        config: Config) \
         -> Iterator[tuple[Signal, Signal]]:
     """Yield tuples of same-position concatenated signals."""
-    xs = _concat(xs, min_coverage, resample, from_position, to_position)
-    ys = _concat(ys, min_coverage, resample, from_position, to_position)
+    xs, ys = _concat(xs, config), _concat(ys, config)
     x, y = next(xs, None), next(ys, None)
     while True:
         if x is None or y is None:
@@ -43,13 +41,7 @@ def concat_pairs(
             x, y = next(xs, None), next(ys, None)
 
 
-def _concat(
-        fasts: list[Fast5],
-        min_coverage: int,
-        resample: int,
-        from_position: int | None,
-        to_position: int | None) \
-        -> Iterator[Signal]:
+def _concat(fasts: list[Fast5], config: Config) -> Iterator[Signal]:
     """Yield concatenated signals from FAST5 files."""
     fasts.sort(key=lambda f: (f.start, f.end))
     start = 0 # Up to which position has been processed already?
@@ -63,15 +55,8 @@ def _concat(
         # Process if at least one file within overlap.
         overlap = fasts[i:j]
         start = max(start, f.start)
-        if start < f.end and j - i >= min_coverage:
-            yield from _concat_range(
-                overlap,
-                start,
-                f.end,
-                min_coverage,
-                resample,
-                from_position,
-                to_position)
+        if start < f.end and j - i >= config.min_coverage:
+            yield from _concat_range(overlap, start, f.end, config)
         start = max(start, f.end)
 
         # Get rid of the processed range.
@@ -82,29 +67,23 @@ def _concat_range(
         fasts: list[Fast5],
         start: int,
         end: int,
-        min_coverage: int,
-        resample: int,
-        from_position: int | None,
-        to_position: int | None) \
+        config: Config) \
         -> Iterator[Signal]:
     """Yield concatenated signals for a range of positions."""
     # For each position...
-    for i in range(start, end):
+    for pos in range(start, end):
 
-        # Skip positions outside the desired range. However, still include at
-        # least window size positions around the desired range, since this is
-        # important for purposes of distance summing.
-        if from_position is not None and from_position - 5 > i + 1 or \
-           to_position is not None and i + 1 > to_position + 5:
+        # Skip positions outside of bounds.
+        if not position_within_bounds(pos, config, with_window=True):
             continue
 
-        signal = Signal(position=i, coverage=0, data=[])
+        signal = Signal(position=pos, coverage=0, data=[])
 
         # For each file containing this position...
-        for f in (f for f in fasts if f.start <= i < f.end):
-            signal.data.extend(f.signal_at(i, resample))
+        for f in (f for f in fasts if f.start <= pos < f.end):
+            signal.data.extend(f.signal_at(pos, config.resample_size))
             signal.coverage += 1
 
-        if signal.coverage >= min_coverage:
+        if signal.coverage >= config.min_coverage:
             signal.data = np.array(signal.data)
             yield signal

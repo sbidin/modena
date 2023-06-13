@@ -1,125 +1,76 @@
 """Exposes the `run_on_datasets` function."""
 
+import dataclasses
+import hashlib
 import logging
+import re
+import subprocess
 import sys
 from pathlib import Path
-from typing import TextIO
 
 import astropy.stats
 import numpy as np
 
 from nodclust.concat import Signal, concat_pairs
+from nodclust.config import Config
 from nodclust.distsum import distsum
 from nodclust.fast5 import Fast5
-from nodclust.helpers import order_paths_by_size
+from nodclust.helpers import position_within_bounds
 
 log = logging.getLogger("nodclust")
 
 
-def emit_line_bed_methyl(
-        chromosome: str,
-        strand: str,
-        pos: int,
-        dist: float,
-        out: TextIO) \
-        -> None:
-    """Emit a single line in the bedMethly format."""
-    # The first 11 columns are defined by the bedMethyl format.
-    out.write(f"{chromosome} ")  # col 1, reference chromosome
-    out.write(f"{pos + 1} ")  # col 2, position from
-    out.write(f"{pos + 2} ")  # col 3, position to
-    out.write("_ ")  # col 4, name of item
-    out.write("_ ")  # col 5, score from 1 to 1000, capped number of reads TODO
-    out.write(f"{strand} ") # col 6, strand
-    out.write("_ ")  # col 7, start of where display should be thick
-    out.write("_ ")  # col 8, end of where display should be thick
-    out.write("_ ")  # col 9, color value
-    out.write("_ ")  # col 10, coverage, or number of reads TODO
-    out.write("_ ")  # col 11, percentage of reads that show methylation at this position TODO
-
-    # All further columns are custom extensions of the format.
-    out.write(f"{dist:.5f}")  # col 12, kuiper distance
-    out.write("\n")
-
-
-def run_on_datasets(
-        xs_path: Path,
-        ys_path: Path,
-        acid: str,
-        strand: str | None,
-        chromosome: str | None,
-        from_position: int | None,
-        to_position: int | None,
-        force_acid: bool,
-        min_coverage: int,
-        resample: int,
-        distance_sum: bool,
-        out: TextIO,
-        random_seed: int | None) \
-        -> None:
+def compare_datasets(config: Config) -> None:
     """Run the application on provided datasets, outputing to a file."""
-    if random_seed is not None:
-        np.random.seed(random_seed)
-
     # Index the datasets by overlapping ranges of positions.
-    xs_path, ys_path = order_paths_by_size(xs_path, ys_path)
-    xs, ys = index_datasets(
-        xs_path,
-        ys_path,
-        acid,
-        strand,
-        chromosome,
-        force_acid,
-        from_position,
-        to_position)
+    xs_path, ys_path = _order_paths_by_size(config.dataset1, config.dataset2)
+    xs, ys = _index_datasets(xs_path, ys_path, config)
 
     # Some metadata gets output once per every line.
     chromosome, strand = xs[0].chromosome, xs[0].strand
 
     # Get Kuiper values for each position signal pair.
-    pairs = concat_pairs(xs, ys, min_coverage, resample, from_position, to_position)
-    stats = map(kuiper, pairs)
-    if distance_sum:
-        stats = distsum(stats, 5)
+    pairs = concat_pairs(xs, ys, config)
+    stats = map(_kuiper, pairs)
+    if not config.no_distance_sum:
+        stats = distsum(stats, config)
 
     # Output the resulting BED file.
     for pos, dist in stats:
-
-        # Skip outputting undesired positions. We have some extra due to
-        # distance summing with neighbours.
-        if from_position is not None and pos + 1 < from_position or \
-           to_position is not None and to_position < pos + 1:
-            continue
-
-        emit_line_bed_methyl(chromosome, strand, pos, dist, out)
+        if position_within_bounds(pos, config):
+            _emit_line_bed_methyl(chromosome, strand, pos, dist, config)
 
 
-def index_datasets(
+def _order_paths_by_size(a: Path, b: Path) -> tuple[Path, Path]:
+    """Reorder given paths by size in ascending order."""
+    datasets = [a, b]
+    datasets.sort(key=_size_at_path)
+    return datasets
+
+
+def _size_at_path(path: Path) -> int:
+    """Get the size in bytes of a file or directory at `path`."""
+    try:
+        size = subprocess.check_output(["du", "-sb", str(path)])
+        size = int(size.split()[0].decode("utf-8"))
+        assert size > 0, "size is zero"
+        return size
+    except:
+        # We don't have access to size information so just make it consistent.
+        return hashlib.md5(str(path).encode()).digest()[0] + 1
+
+
+def _index_datasets(
         xs_path: Path,
         ys_path: Path,
-        acid: str,
-        strand: str | None,
-        chromosome: str | None,
-        force_acid: bool,
-        from_position: int | None,
-        to_position: int | None) \
+        config: Config) \
         -> tuple[list[Fast5], list[Fast5]]:
-    """Preload, filter and sort relevant dataset subsets.
-
-    Accepts strand and chromosome filters.
-    """
+    """Preload, filter and sort relevant dataset subsets."""
     # The first (and smaller) dataset's basic data is read fully and sorted by
     # position. The second dataset is read in a streaming fashion, unordered.
     # We skip any file from the second dataset whose positions do not overlap
     # with those of the first dataset.
-    xs = Fast5.from_path(
-        xs_path,
-        acid,
-        strand,
-        chromosome,
-        force_acid,
-        from_position,
-        to_position)
+    xs = Fast5.from_path(xs_path, config)
     xs = sorted(xs, key=lambda x: (x.start, -x.end))
 
     if not xs:
@@ -128,14 +79,14 @@ def index_datasets(
 
     ys = []
     ys_orig_len = 0
-    for y in Fast5.from_path(
-            ys_path,
-            xs[0].acid,
-            xs[0].strand,
-            fr"^{xs[0].chromosome}$",
-            force_acid,
-            from_position,
-            to_position):
+
+    # Infer second dataset's config to match the first.
+    config = Config(**config.__dict__) # Make a copy so as to not destroy original.
+    config.acid = xs[0].acid
+    config.chromosome = re.compile(fr"^{xs[0].chromosome}$")
+    config.strand = xs[0].strand
+
+    for y in Fast5.from_path(ys_path, config):
         ys_orig_len += 1
         if y.overlap(xs):
             ys.append(y)
@@ -152,10 +103,38 @@ def index_datasets(
     return xs, ys
 
 
-def kuiper(t: tuple[Signal, Signal]) -> tuple[int, float]:
+def _kuiper(t: tuple[Signal, Signal]) -> tuple[int, float]:
     """Return the Kuiper statistic for two given samples."""
     x, y = t
     np.ndarray.sort(x.data)
     np.ndarray.sort(y.data)
     d = astropy.stats._stats.ks_2samp(x.data, y.data)
     return x.position, d
+
+
+def _emit_line_bed_methyl(
+        chromosome: str,
+        strand: str,
+        pos: int,
+        dist: float,
+        config: Config) \
+        -> None:
+    """Emit a single line in the bedMethly format."""
+    out = config.out.write
+
+    # The first 11 columns are defined by the bedMethyl format.
+    out(f"{chromosome} ")  # col 1, reference chromosome
+    out(f"{pos + 1} ")  # col 2, position from
+    out(f"{pos + 2} ")  # col 3, position to
+    out("_ ")  # col 4, name of item
+    out("_ ")  # col 5, score from 1 to 1000, capped number of reads TODO
+    out(f"{strand} ") # col 6, strand
+    out("_ ")  # col 7, start of where display should be thick
+    out("_ ")  # col 8, end of where display should be thick
+    out("_ ")  # col 9, color value
+    out("_ ")  # col 10, coverage, or number of reads TODO
+    out("_ ")  # col 11, percentage of reads that show methylation at this position TODO
+
+    # All further columns are custom extensions of the format.
+    out(f"{dist:.5f}")  # col 12, kuiper distance
+    out("\n")

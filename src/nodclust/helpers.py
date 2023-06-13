@@ -1,25 +1,30 @@
-"""Provides various helper functionality."""
+"""Provides various helpers."""
 
-import hashlib
-import subprocess
-from pathlib import Path
+from nodclust.config import Config
 
 
-def size_at_path(path: Path) -> int:
-    """Get the size in bytes of a file or directory at `path`."""
-    try:
-        size = subprocess.check_output(["du", "-sb", str(path)])
-        size = int(size.split()[0].decode("utf-8"))
-        assert size > 0, "size is zero"
-        return size
-    except:
-        # We don't have access to size information so just make it consistent.
-        return hashlib.md5(str(path).encode()).digest()[0] + 1
+def position_within_bounds(
+        pos: int,
+        config: Config,
+        with_window: bool=False) \
+        -> bool:
+    """Return whether a position satisfies from/to bounds, inclusively."""
+    pos += 1 # Comparisons are done in 1-based indexing.
 
+    # Check left bound.
+    if config.from_position is not None:
+        left = config.from_position
+        if with_window:
+            left -= config.WINDOW_SIZE
+        if pos < left:
+            return False
 
-def order_paths_by_size(a: Path, b: Path) -> tuple[Path, Path]:
-    """Reorder given paths by size in ascending order."""
-    datasets = [a, b]
-    datasets.sort(key=size_at_path)
-    return datasets
+    # Check right bound.
+    if config.to_position is not None:
+        right = config.to_position
+        if with_window:
+            right += config.WINDOW_SIZE
+        if pos > right:
+            return False
 
+    return True

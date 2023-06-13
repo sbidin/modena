@@ -3,18 +3,18 @@
 from collections import deque
 from collections.abc import Iterator
 
+from nodclust.config import Config
+
 
 def distsum(
         stats: Iterator[tuple[int, float]],
-        window_size: int) \
+        config: Config) \
         -> Iterator[tuple[int, float]]:
     """Assign each position a distance that is the sum of its window."""
-    assert window_size > 1
-    assert window_size % 2 == 1
-    window = deque(maxlen=window_size)
+    window = deque(maxlen=config.WINDOW_SIZE)
 
     # Starting out, populate the entire window.
-    for _ in range(window_size):
+    for _ in range(config.WINDOW_SIZE):
         stat = next(stats, None)
         if stat is not None:
             window.append(stat)
@@ -24,17 +24,17 @@ def distsum(
         return
 
     # Handle the prefix first as their left neighbours are incomplete.
-    for i in range(window_size // 2):
+    for i in range(config.WINDOW_SIZE // 2):
         yield from _distsum_at(window, i)
 
     # As the rest are fetched, strip out the prefix.
     for stat in stats:
-        yield from _distsum_at(window, window_size // 2)
+        yield from _distsum_at(window, config.WINDOW_SIZE // 2)
         window.popleft()
         window.append(stat)
 
     # Handle the suffix, with incomplete right neighbours.
-    for i in range(window_size // 2, window_size):
+    for i in range(config.WINDOW_SIZE // 2, config.WINDOW_SIZE):
         yield from _distsum_at(window, i)
 
 

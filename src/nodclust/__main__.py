@@ -6,11 +6,13 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 import jenkspy
 
-from nodclust.run import run_on_datasets
+from nodclust.config import Config
+from nodclust.run import compare_datasets
 
 try:
     logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
@@ -29,63 +31,19 @@ def cli() -> None:
 @click.argument("dataset1")
 @click.argument("dataset2")
 @click.option("-a", "--acid", type=str, default="autodetect", help="Filter by acid, dna or rna")
-@click.option("--force-acid", is_flag=True, type=bool, default=False, help="Force read files as specified by --acid")
-@click.option("-s", "--strand", type=str, default=None, help="Filter by strand, '+' or '-'")
 @click.option("-c", "--chromosome", type=str, default=None, help="Filter by chromosome regex")
+@click.option("--force-acid", is_flag=True, type=bool, default=False, help="Force read files as specified by --acid")
 @click.option("-f", "--from-position", type=int, default=None, help="Filter by minimum position (inclusive)")
-@click.option("-t", "--to-position", type=int, default=None, help="Filter by maximum position (inclusive)")
 @click.option("-m", "--min-coverage", type=int, default=5, help="Filter by minimum coverage (default 5)")
-@click.option("-r", "--resample-size", type=int, default=10, help="Signal resample size; 0 to disable (default 10)")
-@click.option("-o", "--out", default="-", help="Output to a given path")
 @click.option("--no-distance-sum", is_flag=True, type=bool, default=False, help="Don't sum neighbour position distances")
+@click.option("-o", "--out", default="-", help="Output to a given path")
 @click.option("--random-seed", type=int, default=None, help="Force a random seed, for reproducibility")
-def compare(
-        dataset1: str,
-        dataset2: str,
-        acid: str,
-        force_acid: bool,
-        strand: str | None,
-        chromosome: str | None,
-        from_position: int | None,
-        to_position: int | None,
-        min_coverage: int,
-        resample_size: int,
-        out: str,
-        no_distance_sum: bool | None,
-        random_seed: int | None) \
-        -> None:
+@click.option("-r", "--resample-size", type=int, default=10, help="Signal resample size; 0 to disable (default 10)")
+@click.option("-s", "--strand", type=str, default=None, help="Filter by strand, '+' or '-'")
+@click.option("-t", "--to-position", type=int, default=None, help="Filter by maximum position (inclusive)")
+def compare(**kwargs: dict[str, Any]) -> None:
     """Compare two datasets & output an annotated bedMethyl file."""
-    xs_path, ys_path = Path(dataset1), Path(dataset2)
-    assert xs_path.exists(), f"no such path exists: {xs_path}"
-    assert ys_path.exists(), f"no such path exists: {ys_path}"
-
-    # Perform various input argument sanity checks.
-    assert acid in ("dna", "rna", "autodetect"), "--acid must be one of dna, rna or autodetect"
-    assert strand in (None, "+", "-"), "--strand must be one of '+' or '-'"
-    if force_acid:
-        assert acid != "autodetect", "cannot --force-acid without specifying --acid"
-    if from_position is not None:
-        assert from_position >= 0, "--from-position must be at least zero"
-    if to_position is not None:
-        assert to_position >= 0, "--from-position must be at least zero"
-    if from_position is not None and to_position is not None:
-        assert from_position <= to_position, "--from-position must be below or equal to --to-position"
-
-    out = sys.stdout if out == "-" else Path(out).open("w")
-    run_on_datasets(
-        xs_path,
-        ys_path,
-        acid,
-        strand,
-        chromosome,
-        from_position,
-        to_position,
-        force_acid,
-        min_coverage,
-        resample_size if resample_size > 0 else 0,
-        not no_distance_sum,
-        out,
-        random_seed)
+    compare_datasets(Config.from_cmd_args(**kwargs))
 
 
 @click.command()
