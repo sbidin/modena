@@ -67,3 +67,15 @@ Options:
   --random-seed INTEGER        Force a random seed, for reproducibility
   --help                       Show this message and exit.
 ```
+
+```shell
+Usage: nodclust label [OPTIONS] BED_FILE
+
+  Assign positive and negative labels to an annotated BED file.
+
+  Note that this process can take a long time for very large datasets.
+
+Options:
+  -o, --out TEXT  Output to a given path (default stdout)
+  --help          Show this message and exit.
+```

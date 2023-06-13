@@ -91,7 +91,7 @@ def compare(
 @click.command()
 @click.argument("bed_file")
 @click.option("-o", "--out", default="-", help="Output to a given path (default stdout)")
-def jenks(bed_file: str, out: str) -> None:
+def label(bed_file: str, out: str) -> None:
     """Assign positive and negative labels to an annotated BED file.
 
     Note that this process can take a long time for very large datasets.
@@ -117,5 +117,5 @@ def jenks(bed_file: str, out: str) -> None:
 
 if __name__ == "__main__":
     cli.add_command(compare)
-    cli.add_command(jenks)
+    cli.add_command(label)
     cli()
