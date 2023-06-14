@@ -55,16 +55,16 @@ Usage: nodclust compare [OPTIONS] DATASET1 DATASET2
 
 Options:
   -a, --acid TEXT              Filter by acid, dna or rna
-  --force-acid                 Force read files as specified by --acid
-  -s, --strand TEXT            Filter by strand, '+' or '-'
   -c, --chromosome TEXT        Filter by chromosome regex
+  --force-acid                 Force read files as specified by --acid
   -f, --from-position INTEGER  Filter by minimum position (inclusive)
-  -t, --to-position INTEGER    Filter by maximum position (inclusive)
   -m, --min-coverage INTEGER   Filter by minimum coverage (default 5)
-  -r, --resample-size INTEGER  Signal resample size; 0 to disable (default 10)
-  -o, --out TEXT               Output to a given path
   --no-distance-sum            Don't sum neighbour position distances
+  -o, --out TEXT               Output to a given path
   --random-seed INTEGER        Force a random seed, for reproducibility
+  -r, --resample-size INTEGER  Signal resample size; 0 to disable (default 10)
+  -s, --strand TEXT            Filter by strand, '+' or '-'
+  -t, --to-position INTEGER    Filter by maximum position (inclusive)
   --help                       Show this message and exit.
 ```
 
