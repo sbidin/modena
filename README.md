@@ -48,7 +48,7 @@ $ tombo resquiggle path/singles genome.fasta --processes 4 --num-most-common-err
 ### Options
 A quick overview of the available options can be seen via `--help`.
 
-```shell
+```text
 Usage: nodclust compare [OPTIONS] DATASET1 DATASET2
 
   Compare two datasets & output an annotated bedMethyl file.
@@ -68,7 +68,7 @@ Options:
   --help                       Show this message and exit.
 ```
 
-```shell
+```text
 Usage: nodclust label [OPTIONS] BED_FILE
 
   Assign positive and negative labels to an annotated BED file.
