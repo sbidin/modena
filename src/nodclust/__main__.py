@@ -38,7 +38,7 @@ def cli() -> None:
 @click.option("--no-distance-sum", is_flag=True, type=bool, default=False, help="Don't sum neighbour position distances")
 @click.option("-o", "--out", default="-", help="Output to a given path")
 @click.option("--random-seed", type=int, default=None, help="Force a random seed, for reproducibility")
-@click.option("-r", "--resample-size", type=int, default=10, help="Signal resample size; 0 to disable (default 10)")
+@click.option("-r", "--resample-size", type=int, default=15, help="Signal resample size; 0 to disable (default 15)")
 @click.option("-s", "--strand", type=str, default=None, help="Filter by strand, '+' or '-'")
 @click.option("-t", "--to-position", type=int, default=None, help="Filter by maximum position (inclusive)")
 def compare(**kwargs: dict[str, Any]) -> None:
