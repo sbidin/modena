@@ -4,7 +4,7 @@
 
 import logging
 import os
-from typing import Any
+from typing import Any, Dict
 
 import click
 
@@ -33,7 +33,7 @@ finally:
 @click.option("-r", "--resample-size", type=int, default=15, help="Signal resample size; 0 to disable (default 15)")
 @click.option("-s", "--strand", type=str, default=None, help="Filter by strand, '+' or '-'")
 @click.option("-t", "--to-position", type=int, default=None, help="Filter by maximum position (inclusive)")
-def cli(**kwargs: dict[str, Any]) -> None:
+def cli(**kwargs: Dict[str, Any]) -> None:
     """Compare two datasets & output an annotated bedMethyl file."""
     conf = Config.from_cmd_args(**kwargs)
     compare_datasets(conf)

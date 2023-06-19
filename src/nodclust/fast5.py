@@ -5,11 +5,10 @@ from __future__ import annotations
 import logging
 import re
 from bisect import bisect_left
-from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Optional
+from typing import Iterator, List, Optional, Tuple
 
 import h5py
 import numpy as np
@@ -111,9 +110,9 @@ class Fast5:
             if re.match(r"^.*\.fast5$", sub.name, flags=re.IGNORECASE) and sub.is_file():
                 yield from Fast5._maybe_from_file_path(sub, forced_acid)
 
-    def overlap(self, fasts: list[Fast5]) -> Optional[Fast5]:
+    def overlap(self, fasts: List[Fast5]) -> Optional[Fast5]:
         """Return the first file whose positions overlap with self."""
-        j = bisect_left(fasts, (self.start, -self.end), key=lambda f: (f.start, -f.end))
+        j = bisect_left([(f.start, -f.end) for f in fasts], (self.start, -self.end))
         for i in range(max(j - 1, 0), len(fasts)):
             f = fasts[i]
             if f.start >= self.end:
@@ -122,7 +121,7 @@ class Fast5:
                 return f
 
     @cached_property
-    def positions(self) -> list[int]:
+    def positions(self) -> List[int]:
         """Returns positions within the underlying array to extract signals from."""
         _, lengths = self.signal
         ps = [0]
@@ -139,6 +138,7 @@ class Fast5:
 
         # Optionally performs resampling.
         if resample > 0 and resample != len(signal):
+            #np.resize(signal, resample)
             signal = np.random.choice(signal, size=resample, replace=True)
 
         return signal
@@ -195,7 +195,7 @@ class Fast5:
             end=start + size)
 
     @cached_property
-    def signal(self) -> tuple[np.ndarray, np.ndarray]:
+    def signal(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get signal and signal length data."""
         with h5py.File(self.path) as f:
             tpl = f.get("Analyses/RawGenomeCorrected_000/BaseCalled_template")

@@ -1,8 +1,8 @@
 """Provides an iterator concatenating signals from multiple FAST5 files."""
 
 import logging
-from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Iterator, List, Tuple
 
 import numpy as np
 
@@ -22,10 +22,10 @@ class Signal:
 
 
 def concat_pairs(
-        xs: list[Fast5],
-        ys: list[Fast5],
+        xs: List[Fast5],
+        ys: List[Fast5],
         config: Config) \
-        -> Iterator[tuple[Signal, Signal]]:
+        -> Iterator[Tuple[Signal, Signal]]:
     """Yield tuples of same-position concatenated signals."""
     xs, ys = _concat(xs, config), _concat(ys, config)
     x, y = next(xs, None), next(ys, None)
@@ -41,7 +41,7 @@ def concat_pairs(
             x, y = next(xs, None), next(ys, None)
 
 
-def _concat(fasts: list[Fast5], config: Config) -> Iterator[Signal]:
+def _concat(fasts: List[Fast5], config: Config) -> Iterator[Signal]:
     """Yield concatenated signals from FAST5 files."""
     fasts.sort(key=lambda f: (f.start, f.end))
     start = 0 # Up to which position has been processed already?
@@ -64,7 +64,7 @@ def _concat(fasts: list[Fast5], config: Config) -> Iterator[Signal]:
 
 
 def _concat_range(
-        fasts: list[Fast5],
+        fasts: List[Fast5],
         start: int,
         end: int,
         config: Config) \

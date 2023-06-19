@@ -3,7 +3,7 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 import numpy as np
 
@@ -27,7 +27,7 @@ class Config:
     WINDOW_SIZE: int = 5
 
     @staticmethod
-    def from_cmd_args(**kwargs: dict[str, Any]) -> "Config":
+    def from_cmd_args(**kwargs: Dict[str, Any]) -> "Config":
         """Create a `Config` given `click` commandline arguments."""
         config = Config(**kwargs)
         config._postprocess()

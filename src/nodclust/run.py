@@ -7,7 +7,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import TextIO
+from typing import List, TextIO, Tuple
 
 import astropy.stats
 import kmeans1d
@@ -51,7 +51,7 @@ def compare_datasets(config: Config) -> None:
         _cluster_output(config)
 
 
-def _order_paths_by_size(a: Path, b: Path) -> tuple[Path, Path]:
+def _order_paths_by_size(a: Path, b: Path) -> Tuple[Path, Path]:
     """Reorder given paths by size in ascending order."""
     datasets = [a, b]
     datasets.sort(key=_size_at_path)
@@ -76,7 +76,7 @@ def _index_datasets(
         xs_path: Path,
         ys_path: Path,
         config: Config) \
-        -> tuple[list[Fast5], list[Fast5]]:
+        -> Tuple[List[Fast5], List[Fast5]]:
     """Preload, filter and sort relevant dataset subsets."""
     # The first (and smaller) dataset's basic data is read fully and sorted by
     # position. The second dataset is read in a streaming fashion, unordered.
@@ -115,7 +115,7 @@ def _index_datasets(
     return xs, ys
 
 
-def _kuiper(t: tuple[Signal, Signal]) -> tuple[int, float]:
+def _kuiper(t: Tuple[Signal, Signal]) -> Tuple[int, float]:
     """Return the Kuiper statistic for two given samples."""
     x, y = t
     np.ndarray.sort(x.data)
@@ -175,7 +175,7 @@ def _cluster_output(config: Config) -> None:
     # Output same file, but with assigned labels, to a different file.
     output_annotated = str(config.output_bed) + ".cluster-in-progress"
     with open(output_annotated, "w") as f:
-        for line, label in zip(lines, labels, strict=True):
+        for line, label in zip(lines, labels):
             line.append("pos" if label == pos_label else "neg")
             f.write(" ".join(line))
             f.write("\n")

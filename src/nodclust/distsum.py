@@ -1,15 +1,15 @@
 """Provides a distance sum generator."""
 
 from collections import deque
-from collections.abc import Iterator
+from typing import Deque, Iterator, Tuple
 
 from nodclust.config import Config
 
 
 def distsum(
-        stats: Iterator[tuple[int, float]],
+        stats: Iterator[Tuple[int, float]],
         config: Config) \
-        -> Iterator[tuple[int, float]]:
+        -> Iterator[Tuple[int, float]]:
     """Assign each position a distance that is the sum of its window."""
     window = deque(maxlen=config.WINDOW_SIZE)
 
@@ -39,9 +39,9 @@ def distsum(
 
 
 def _distsum_at(
-        window: deque[tuple[int, float]],
+        window: Deque[Tuple[int, float]],
         i: int) \
-        -> Iterator[tuple[int, float]]:
+        -> Iterator[Tuple[int, float]]:
     assert 0 <= i < len(window)
     span = window.maxlen // 2
     sum_dists = 0

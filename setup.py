@@ -3,14 +3,13 @@ from setuptools import setup
 setup(
     name="nodclust",
     version="0.0.1",
-    python_requires=">=3.10",
+    python_requires=">=3.8",
     package_dir={"": "src"},
     install_requires=[
-        "astropy == 5.3",
+        "astropy >= 5.2, < 6",
         "click == 8.1.3",
         "h5py == 3.8.0",
         "kmeans1d == 0.3.1",
-        "scipy == 1.10.1",
     ],
     extras_require={'dev': [
         'pytest == 7.2.2',

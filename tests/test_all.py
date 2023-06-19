@@ -1,9 +1,8 @@
 """All tests."""
 
 import os
-from collections.abc import Iterator
-from io import StringIO
 from pathlib import Path
+from typing import Iterator
 
 import pytest
 from nodclust.config import Config
@@ -53,7 +52,7 @@ def test_output(acid: str, coverage: int, resample: int, _cleanup) -> None:
     compare_datasets(config)
 
     # Compare expected with actual output.
-    with (open(f"tests/out/{acid}.coverage-{coverage}.resample-{resample}.bed") as out,
-          open("out.test.bed") as exp):
-        for out_line, exp_line in zip(out, exp, strict=False):
-            assert out_line == exp_line, "output vs expected line mismatch"
+    with open(f"tests/out/{acid}.coverage-{coverage}.resample-{resample}.bed") as out:
+        with open("out.test.bed") as exp:
+            for out_line, exp_line in zip(out, exp):
+                assert out_line == exp_line, "output vs expected line mismatch"
