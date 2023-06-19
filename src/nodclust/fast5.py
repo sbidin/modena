@@ -138,7 +138,6 @@ class Fast5:
 
         # Optionally performs resampling.
         if resample > 0 and resample != len(signal):
-            #np.resize(signal, resample)
             signal = np.random.choice(signal, size=resample, replace=True)
 
         return signal
