@@ -1,10 +1,9 @@
 """Provides a configuration object."""
 
 import re
-import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, TextIO
+from typing import Any, Optional
 
 import numpy as np
 
