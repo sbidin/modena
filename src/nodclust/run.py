@@ -1,12 +1,12 @@
 """Exposes the `run_on_datasets` function."""
 
-import dataclasses
 import hashlib
 import logging
 import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import TextIO
 
 import astropy.stats
 import numpy as np
@@ -36,9 +36,10 @@ def compare_datasets(config: Config) -> None:
         stats = distsum(stats, config)
 
     # Output the resulting BED file.
-    for pos, dist in stats:
-        if position_within_bounds(pos, config):
-            _emit_line_bed_methyl(chromosome, strand, pos, dist, config)
+    with open(config.output_bed, "w") as f:
+        for pos, dist in stats:
+            if position_within_bounds(pos, config):
+                _emit_line_bed_methyl(chromosome, strand, pos, dist, f)
 
 
 def _order_paths_by_size(a: Path, b: Path) -> tuple[Path, Path]:
@@ -117,10 +118,10 @@ def _emit_line_bed_methyl(
         strand: str,
         pos: int,
         dist: float,
-        config: Config) \
+        out_file: TextIO) \
         -> None:
     """Emit a single line in the bedMethly format."""
-    out = config.out.write
+    out = out_file.write
 
     # The first 11 columns are defined by the bedMethyl format.
     out(f"{chromosome} ")  # col 1, reference chromosome

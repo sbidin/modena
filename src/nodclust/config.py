@@ -20,7 +20,7 @@ class Config:
     from_position: Optional[int]
     min_coverage: int
     no_distance_sum: bool
-    out: TextIO
+    output_bed: Path
     random_seed: Optional[int]
     resample_size: int
     strand: Optional[str]
@@ -45,7 +45,6 @@ class Config:
 
         self.dataset1 = Path(self.dataset1)
         self.dataset2 = Path(self.dataset2)
-        self.out = sys.stdout if self.out == "-" else Path(self.out).open("w")
         if self.random_seed is not None:
             np.random.seed(self.random_seed)
 

@@ -1,5 +1,6 @@
 """All tests."""
 
+import os
 from collections.abc import Iterator
 from io import StringIO
 from pathlib import Path
@@ -19,10 +20,19 @@ def _param_combos() -> Iterator[tuple]:
             int(name[2].split("-")[1])) # Resample size.
 
 
+@pytest.fixture
+def _cleanup() -> None:
+    """Remove the resulting "out.test.bed" file, if present."""
+    yield
+    out = Path("out.test.bed")
+    if out.exists():
+        os.remove(out)
+
+
 @pytest.mark.parametrize(
     ("acid", "coverage", "resample"),
     _param_combos())
-def test_output(acid: str, coverage: int, resample: int) -> None:
+def test_output(acid: str, coverage: int, resample: int, _cleanup) -> None:
     """Test that application output matches one on disk."""
     config = Config.from_cmd_args(
         dataset1=Path(f"tests/inp/{acid}-1"),
@@ -33,19 +43,17 @@ def test_output(acid: str, coverage: int, resample: int) -> None:
         from_position=None,
         min_coverage=coverage,
         no_distance_sum=False,
-        out="-",
+        output_bed="out.test.bed",
         random_seed=42, # Needed to make the test deterministic.
         resample_size=resample,
         strand="+", # Hardcoded to + because CI vs local can be non-deterministic.
         to_position=None)
-    config.out = StringIO() # Override, since we're writing to memory.
 
+    # This will write results into "out.test.bed".
     compare_datasets(config)
 
-    # Read expected output.
-    with open(f"tests/out/{acid}.coverage-{coverage}.resample-{resample}.bed") as f:
-        exp = f.read()
-
     # Compare expected with actual output.
-    for a, b in zip(config.out.getvalue().splitlines(), exp.splitlines(), strict=False):
-        assert a == b, "output mismatch"
+    with (open(f"tests/out/{acid}.coverage-{coverage}.resample-{resample}.bed") as out,
+          open("out.test.bed") as exp):
+        for a, b in zip(out, exp, strict=False):
+            assert a == b, "output mismatch"
