@@ -137,7 +137,8 @@ class Fast5:
         signal = signal[self.positions[i]:self.positions[i] + length[i]]
 
         # Optionally performs resampling.
-        if resample > 0:
+        if resample > 0 and resample != len(signal):
+            #np.resize(signal, resample)
             signal = np.random.choice(signal, size=resample, replace=True)
 
         return signal
