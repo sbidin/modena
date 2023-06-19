@@ -22,7 +22,7 @@ finally:
 @click.command()
 @click.argument("dataset1")
 @click.argument("dataset2")
-@click.output("output_bed")
+@click.argument("output_bed")
 @click.option("-a", "--acid", type=str, default="autodetect", help="Filter by acid, dna or rna")
 @click.option("-c", "--chromosome", type=str, default=None, help="Filter by chromosome regex")
 @click.option("--force-acid", is_flag=True, type=bool, default=False, help="Force read files as specified by --acid")
