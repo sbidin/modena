@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -9,6 +10,7 @@ from pathlib import Path
 from typing import TextIO
 
 import astropy.stats
+import kmeans1d
 import numpy as np
 
 from nodclust.concat import Signal, concat_pairs
@@ -40,6 +42,9 @@ def compare_datasets(config: Config) -> None:
         for pos, dist in stats:
             if position_within_bounds(pos, config):
                 _emit_line_bed_methyl(chromosome, strand, pos, dist, f)
+
+    # Overwrite it with an annotated BED file.
+    _cluster_output(config)
 
 
 def _order_paths_by_size(a: Path, b: Path) -> tuple[Path, Path]:
@@ -139,3 +144,35 @@ def _emit_line_bed_methyl(
     # All further columns are custom extensions of the format.
     out(f"{dist:.5f}")  # col 12, kuiper distance
     out("\n")
+
+
+def _cluster_output(config: Config) -> None:
+    """Assign positive and negative labels to an annotated BED file.
+
+    This will read the output BED file and overwrite it with a labeled version.
+    """
+    # Read entire file.
+    with config.output_bed.open() as f:
+        lines = [line.split() for line in f.read().splitlines()]
+        if not lines:
+            log.warning("output file is empty, no clustering performed")
+            return
+
+    # Assign labels.
+    scores = [float(line[11]) for line in lines]
+    labels, _ = kmeans1d.cluster(scores, 2)
+    assert len(scores) == len(labels)
+
+    # Kmeans1d gives us labels of 0 and 1. Treat those assigned to larger scores as positive.
+    pos_label = labels[scores.index(max(scores))]
+
+    # Output same file, but with assigned labels, to a different file.
+    output_annotated = str(config.output_bed) + ".cluster-in-progress"
+    with open(output_annotated, "w") as f:
+        for line, label in zip(lines, labels, strict=True):
+            line.append("pos" if label == pos_label else "neg")
+            f.write(" ".join(line))
+            f.write("\n")
+
+    # Overwrite the original output with the assigned-labels one.
+    os.rename(output_annotated, config.output_bed)

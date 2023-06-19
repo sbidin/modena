@@ -9,7 +9,7 @@ setup(
         "astropy == 5.3",
         "click == 8.1.3",
         "h5py == 3.8.0",
-        "jenkspy == 0.3.2",
+        "kmeans1d == 0.3.1",
         "scipy == 1.10.1",
     ],
     extras_require={'dev': [

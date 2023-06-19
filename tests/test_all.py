@@ -55,5 +55,5 @@ def test_output(acid: str, coverage: int, resample: int, _cleanup) -> None:
     # Compare expected with actual output.
     with (open(f"tests/out/{acid}.coverage-{coverage}.resample-{resample}.bed") as out,
           open("out.test.bed") as exp):
-        for a, b in zip(out, exp, strict=False):
-            assert a == b, "output mismatch"
+        for out_line, exp_line in zip(out, exp, strict=False):
+            assert out_line == exp_line, "output vs expected line mismatch"

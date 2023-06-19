@@ -45,6 +45,7 @@ class Config:
 
         self.dataset1 = Path(self.dataset1)
         self.dataset2 = Path(self.dataset2)
+        self.output_bed = Path(self.output_bed)
         if self.random_seed is not None:
             np.random.seed(self.random_seed)
 

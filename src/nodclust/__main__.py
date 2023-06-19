@@ -4,12 +4,9 @@
 
 import logging
 import os
-import sys
-from pathlib import Path
 from typing import Any
 
 import click
-import jenkspy
 
 from nodclust.config import Config
 from nodclust.run import compare_datasets
@@ -38,34 +35,8 @@ finally:
 @click.option("-t", "--to-position", type=int, default=None, help="Filter by maximum position (inclusive)")
 def cli(**kwargs: dict[str, Any]) -> None:
     """Compare two datasets & output an annotated bedMethyl file."""
-    compare_datasets(Config.from_cmd_args(**kwargs))
-
-
-@click.command()
-@click.argument("bed_file")
-@click.option("-o", "--out", default="-", help="Output to a given path (default stdout)")
-def label(bed_file: str, out: str) -> None:
-    """Assign positive and negative labels to an annotated BED file.
-
-    Note that this process can take a long time for very large datasets.
-    """
-    path = Path(bed_file)
-    assert path.exists(), f"path {path} does not exist"
-    out = sys.stdout if out == "-" else Path(out).open("w")
-
-    # Read entire file.
-    with path.open() as f:
-        lines = [line.split() for line in f.read().splitlines()]
-
-    # Calculate breaks.
-    scores = sorted(-float(line[11]) for line in lines)
-    breaks = jenkspy.jenks_breaks(scores, n_classes=2)
-
-    # Assign labels and output.
-    for line in lines:
-        line.append("pos" if -float(line[11]) < breaks[1] else "neg")
-        out.write(" ".join(line))
-        out.write("\n")
+    conf = Config.from_cmd_args(**kwargs)
+    compare_datasets(conf)
 
 
 if __name__ == "__main__":
