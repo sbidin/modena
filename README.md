@@ -14,14 +14,14 @@ threshold.
 ### Install and run locally
 ```shell
 $ python -m pip install -e . # Install.
-$ python -m nodclust compare path/to/dataset/one and/path/to/dataset/two # Run.
+$ python -m nodclust path/dataset1 path/dataset2 output.bed # Run.
 $ python -m nodclust --help # See options.
 ```
 
 ### Install and run via docker
 ```shell
 $ docker build . -t nodclust # Build docker image.
-$ docker run -v `pwd`:`pwd` -w `pwd` --rm -it nodclust compare ./dataset/one ./and/two # Run.
+$ docker run -v `pwd`:`pwd` -w `pwd` --rm -it nodclust ./dataset1 ./dataset2 output.bed # Run.
 $ docker run --rm -it nodclust --help # See options.
 ```
 
@@ -49,7 +49,7 @@ $ tombo resquiggle path/singles genome.fasta --processes 4 --num-most-common-err
 A quick overview of the available options can be seen via `--help`.
 
 ```text
-Usage: nodclust compare [OPTIONS] DATASET1 DATASET2
+Usage: nodclust [OPTIONS] DATASET1 DATASET2 OUTPUT_BED
 
   Compare two datasets & output an annotated bedMethyl file.
 
@@ -60,22 +60,9 @@ Options:
   -f, --from-position INTEGER  Filter by minimum position (inclusive)
   -m, --min-coverage INTEGER   Filter by minimum coverage (default 5)
   --no-distance-sum            Don't sum neighbour position distances
-  -o, --out TEXT               Output to a given path
   --random-seed INTEGER        Force a random seed, for reproducibility
-  -r, --resample-size INTEGER  Signal resample size; 0 to disable (default 10)
+  -r, --resample-size INTEGER  Signal resample size; 0 to disable (default 15)
   -s, --strand TEXT            Filter by strand, '+' or '-'
   -t, --to-position INTEGER    Filter by maximum position (inclusive)
   --help                       Show this message and exit.
-```
-
-```text
-Usage: nodclust label [OPTIONS] BED_FILE
-
-  Assign positive and negative labels to an annotated BED file.
-
-  Note that this process can take a long time for very large datasets.
-
-Options:
-  -o, --out TEXT  Output to a given path (default stdout)
-  --help          Show this message and exit.
 ```
