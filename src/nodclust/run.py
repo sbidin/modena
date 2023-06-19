@@ -17,7 +17,7 @@ from nodclust.concat import Signal, concat_pairs
 from nodclust.config import Config
 from nodclust.distsum import distsum
 from nodclust.fast5 import Fast5
-from nodclust.helpers import position_within_bounds
+from nodclust.helpers import position_within_bounds, timer
 
 log = logging.getLogger("nodclust")
 
@@ -25,8 +25,11 @@ log = logging.getLogger("nodclust")
 def compare_datasets(config: Config) -> None:
     """Run the application on provided datasets, outputing to a file."""
     # Index the datasets by overlapping ranges of positions.
-    xs_path, ys_path = _order_paths_by_size(config.dataset1, config.dataset2)
-    xs, ys = _index_datasets(xs_path, ys_path, config)
+    with timer("ordering datasets by size"):
+        xs_path, ys_path = _order_paths_by_size(config.dataset1, config.dataset2)
+
+    with timer("indexing datasets"):
+        xs, ys = _index_datasets(xs_path, ys_path, config)
 
     # Some metadata gets output once per every line.
     chromosome, strand = xs[0].chromosome, xs[0].strand
@@ -38,13 +41,14 @@ def compare_datasets(config: Config) -> None:
         stats = distsum(stats, config)
 
     # Output the resulting BED file.
-    with open(config.output_bed, "w") as f:
+    with timer("calculating position distances"), open(config.output_bed, "w") as f:
         for pos, dist in stats:
             if position_within_bounds(pos, config):
                 _emit_line_bed_methyl(chromosome, strand, pos, dist, f)
 
     # Overwrite it with an annotated BED file.
-    _cluster_output(config)
+    with timer("clustering output"):
+        _cluster_output(config)
 
 
 def _order_paths_by_size(a: Path, b: Path) -> tuple[Path, Path]:
@@ -60,9 +64,11 @@ def _size_at_path(path: Path) -> int:
         size = subprocess.check_output(["du", "-sb", str(path)])
         size = int(size.split()[0].decode("utf-8"))
         assert size > 0, "size is zero"
+        log.debug(f"size of {path} is {size} bytes")
         return size
     except:
         # We don't have access to size information so just make it consistent.
+        log.debug(f"could not determine size of {path}")
         return hashlib.md5(str(path).encode()).digest()[0] + 1
 
 
