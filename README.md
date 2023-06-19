@@ -11,6 +11,8 @@ average F1-scores fluctuate between 0.244 and 0.512. We depart from the common
 paradigm by using one-dimensional clustering to establish the classification
 threshold.
 
+Supports Python 3.8 or greater.
+
 ### Install and run locally
 ```shell
 $ python -m pip install -e . # Install.
