@@ -25,6 +25,36 @@ $ docker run -v `pwd`:`pwd` -w `pwd` --rm -it nodclust ./dataset1 ./dataset2 out
 $ docker run --rm -it nodclust --help # See options.
 ```
 
+### Options
+A quick overview of the available options can be seen via `--help`:
+```text
+Usage: nodclust [OPTIONS] DATASET1 DATASET2 OUTPUT_BED
+
+  Compare two datasets & output an annotated bedMethyl file.
+
+Options:
+  -a, --acid TEXT              Filter by acid, dna or rna
+  -c, --chromosome TEXT        Filter by chromosome regex
+  --force-acid                 Force read files as specified by --acid
+  -f, --from-position INTEGER  Filter by minimum position (inclusive)
+  -m, --min-coverage INTEGER   Filter by minimum coverage (default 5)
+  --no-distance-sum            Don't sum neighbour position distances
+  --random-seed INTEGER        Force a random seed, for reproducibility
+  -r, --resample-size INTEGER  Signal resample size; 0 to disable (default 15)
+  -s, --strand TEXT            Filter by strand, '+' or '-'
+  -t, --to-position INTEGER    Filter by maximum position (inclusive)
+  --help                       Show this message and exit.
+```
+
+### Example dataset
+Small example DNA and RNA datasets are included in the repository within
+`/tests/inp` and will be cloned alongside the repo if you have `git-lfs`
+installed. Here's an example of how `nodclust` could be run on the RNA
+datasets:
+```shell
+$ python -m nodclust tests/inp/rna-{1,2} out.bed
+```
+
 ### Supported input formats
 Only single-FAST5 files processed by
 [tombo](https://nanoporetech.github.io/tombo/index.html) are supported. If your
@@ -45,24 +75,3 @@ $ tombo preprocess annotate_raws_with_fastqs --fast5-basedir path/singles --fast
 $ tombo resquiggle path/singles genome.fasta --processes 4 --num-most-common-errors 5
 ```
 
-### Options
-A quick overview of the available options can be seen via `--help`.
-
-```text
-Usage: nodclust [OPTIONS] DATASET1 DATASET2 OUTPUT_BED
-
-  Compare two datasets & output an annotated bedMethyl file.
-
-Options:
-  -a, --acid TEXT              Filter by acid, dna or rna
-  -c, --chromosome TEXT        Filter by chromosome regex
-  --force-acid                 Force read files as specified by --acid
-  -f, --from-position INTEGER  Filter by minimum position (inclusive)
-  -m, --min-coverage INTEGER   Filter by minimum coverage (default 5)
-  --no-distance-sum            Don't sum neighbour position distances
-  --random-seed INTEGER        Force a random seed, for reproducibility
-  -r, --resample-size INTEGER  Signal resample size; 0 to disable (default 15)
-  -s, --strand TEXT            Filter by strand, '+' or '-'
-  -t, --to-position INTEGER    Filter by maximum position (inclusive)
-  --help                       Show this message and exit.
-```
