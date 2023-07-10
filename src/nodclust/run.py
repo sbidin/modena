@@ -86,7 +86,7 @@ def _index_datasets(
     xs = sorted(xs, key=lambda x: (x.start, -x.end))
 
     if not xs:
-        log.error(f"no valid files in {xs_path}")
+        log.error(f"no files satisfying filters found in {xs_path}")
         sys.exit(1)
 
     ys = []
@@ -135,20 +135,20 @@ def _emit_line_bed_methyl(
     out = out_file.write
 
     # The first 11 columns are defined by the bedMethyl format.
-    out(f"{chromosome} ")  # col 1, reference chromosome
-    out(f"{pos + 1} ")  # col 2, position from
-    out(f"{pos + 2} ")  # col 3, position to
-    out("_ ")  # col 4, name of item
-    out("_ ")  # col 5, score from 1 to 1000, capped number of reads TODO
+    out(f"{chromosome} ") # col 1, reference chromosome
+    out(f"{pos + 1} ") # col 2, position from
+    out(f"{pos + 2} ") # col 3, position to
+    out("_ ") # col 4, name of item
+    out("_ ") # col 5, score from 1 to 1000, capped number of reads TODO
     out(f"{strand} ") # col 6, strand
-    out("_ ")  # col 7, start of where display should be thick
-    out("_ ")  # col 8, end of where display should be thick
-    out("_ ")  # col 9, color value
-    out("_ ")  # col 10, coverage, or number of reads TODO
-    out("_ ")  # col 11, percentage of reads that show methylation at this position TODO
+    out("_ ") # col 7, start of where display should be thick
+    out("_ ") # col 8, end of where display should be thick
+    out("_ ") # col 9, color value
+    out("_ ") # col 10, coverage, or number of reads TODO
+    out("_ ") # col 11, percentage of reads that show methylation at this position TODO
 
     # All further columns are custom extensions of the format.
-    out(f"{dist:.5f}")  # col 12, kuiper distance
+    out(f"{dist:.5f} ") # col 12, kuiper distance
     out("\n")
 
 

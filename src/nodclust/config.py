@@ -20,6 +20,7 @@ class Config:
     min_coverage: int
     no_distance_sum: bool
     output_bed: Path
+    pattern: Optional[re.Pattern]
     random_seed: Optional[int]
     resample_size: int
     strand: Optional[str]
@@ -45,6 +46,13 @@ class Config:
         self.dataset1 = Path(self.dataset1)
         self.dataset2 = Path(self.dataset2)
         self.output_bed = Path(self.output_bed)
+
+        try:
+            if self.pattern is not None:
+                self.pattern = re.compile(self.pattern, re.IGNORECASE)
+        except re.error as err:
+            raise AssertionError("pattern regex must be valid") from err
+
         if self.random_seed is not None:
             np.random.seed(self.random_seed)
 

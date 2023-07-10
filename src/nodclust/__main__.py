@@ -29,6 +29,7 @@ finally:
 @click.option("-f", "--from-position", type=int, default=None, help="Filter by minimum position (inclusive)")
 @click.option("-m", "--min-coverage", type=int, default=5, help="Filter by minimum coverage (default 5)")
 @click.option("--no-distance-sum", is_flag=True, type=bool, default=False, help="Don't sum neighbour position distances")
+@click.option("--pattern", type=str, default=None, help="Filter by DNA or RNA pattern")
 @click.option("--random-seed", type=int, default=None, help="Force a random seed, for reproducibility")
 @click.option("-r", "--resample-size", type=int, default=15, help="Signal resample size; 0 to disable (default 15)")
 @click.option("-s", "--strand", type=str, default=None, help="Filter by strand, '+' or '-'")

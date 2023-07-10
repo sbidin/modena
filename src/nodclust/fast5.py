@@ -18,6 +18,11 @@ from nodclust.config import Config
 log = logging.getLogger("nodclust")
 
 
+# A global containing all positions that match the configured pattern. To be
+# used only in case a configured pattern exists, else it is empty.
+PATTERN_MATCH_POSITIONS = set()
+
+
 @dataclass
 class Fast5:
     """A subset of a parsed FAST5 file.
@@ -96,6 +101,16 @@ class Fast5:
             elif strand_selected != f.strand:
                 log.debug(f"skipped {f.path} due to incompatible strand {f.strand}")
                 continue
+
+            # Update the global pattern positions when a pattern is used. Skip
+            # the file if no pattern found within.
+            if config.pattern is not None:
+                matches = f.pattern_matches(config)
+                if not matches:
+                    log.debug(f"skipped {f.path} due to no pattern match")
+                    continue
+                global PATTERN_MATCH_POSITIONS
+                PATTERN_MATCH_POSITIONS.update(matches)
 
             log.debug(f"selected {f.path}")
             yield f
@@ -193,6 +208,29 @@ class Fast5:
             start=start,
             end=start + size)
 
+    def pattern_matches(self, config: Config) -> set[int]:
+        """Get all positions matching a configured pattern, including the window."""
+        assert config.pattern, "cannot find pattern positions when no pattern specified"
+
+        with h5py.File(self.path) as f:
+            tpl = f.get("Analyses/RawGenomeCorrected_000/BaseCalled_template")
+            evt = tpl.get("Events")
+            bases = evt["base"]
+            if self.strand == "-":
+                bases = np.flip(bases)
+            bases = b"".join(bases).decode("utf-8")
+
+        matches = set()
+        for match in config.pattern.finditer(bases):
+            a, b = match.span()
+            a += self.start
+            b += self.start
+            matches.update(range(a - config.WINDOW_SIZE // 2, a)) # Window left.
+            matches.update(range(a, b)) # The match itself.
+            matches.update(range(b, b + config.WINDOW_SIZE // 2)) # Window right.
+
+        return matches
+
     @cached_property
     def signal(self) -> tuple[np.ndarray, np.ndarray]:
         """Get signal and signal length data."""
@@ -204,9 +242,11 @@ class Fast5:
             scale = tpl.attrs.get("scale")
             rds = f.get("Raw/Reads")
             rdn = list(rds.keys())
+
             sgn = rds[rdn[0]]["Signal"][()]
             if self.acid == "rna":
                 sgn = np.flip(sgn)
             signal = (sgn[read_start_rel_to_raw:] - shift) / scale
             lengths = evt["length"]
+
             return signal, lengths

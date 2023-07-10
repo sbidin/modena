@@ -43,6 +43,7 @@ def test_output(acid: str, coverage: int, resample: int, _cleanup) -> None:
         min_coverage=coverage,
         no_distance_sum=False,
         output_bed="out.test.bed",
+        pattern=None,
         random_seed=42, # Needed to make the test deterministic.
         resample_size=resample,
         strand="+", # Hardcoded to + because CI vs local can be non-deterministic.
