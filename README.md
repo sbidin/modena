@@ -41,6 +41,7 @@ Options:
   -f, --from-position INTEGER  Filter by minimum position (inclusive)
   -m, --min-coverage INTEGER   Filter by minimum coverage (default 5)
   --no-distance-sum            Don't sum neighbour position distances
+  --pattern TEXT               Filter by pattern
   --random-seed INTEGER        Force a random seed, for reproducibility
   -r, --resample-size INTEGER  Signal resample size; 0 to disable (default 15)
   -s, --strand TEXT            Filter by strand, '+' or '-'
