@@ -5,7 +5,7 @@ epigenetic/epitranscriptomic modifications.
 
 This application is the implementation of an unsupervised approach for detecting
 a diverse range of epigenetic and epitranscriptomic modifications. Using a
-combination of the Kuiper test and Jenks 1D clustering, this method exhibits an
+combination of the Kuiper test and 1D clustering, this method exhibits an
 average F1-score of 0.746, significantly outperforming rival methods whose
 average F1-scores fluctuate between 0.244 and 0.512. We depart from the common
 paradigm by using one-dimensional clustering to establish the classification
