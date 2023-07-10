@@ -17,8 +17,13 @@ def position_within_bounds(
         -> bool:
     """Return whether a position satisfies various filters."""
     # Check for pattern position match.
-    if config.pattern and pos not in PATTERN_MATCH_POSITIONS:
-        return False
+    if config.pattern:
+        left, right = pos, pos + 1
+        if with_window:
+            left -= config.WINDOW_SIZE // 2
+            right += config.WINDOW_SIZE // 2
+        if not any(pos in PATTERN_MATCH_POSITIONS for pos in range(left, right)):
+            return False
 
     pos += 1 # Perform from/to bounds checks in 1-based indexing.
 

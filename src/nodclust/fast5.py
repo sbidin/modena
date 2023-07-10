@@ -209,7 +209,7 @@ class Fast5:
             end=start + size)
 
     def pattern_matches(self, config: Config) -> set[int]:
-        """Get all positions matching a configured pattern, including the window."""
+        """Get all positions matching a configured pattern, not including the window."""
         assert config.pattern, "cannot find pattern positions when no pattern specified"
 
         with h5py.File(self.path) as f:
@@ -223,11 +223,7 @@ class Fast5:
         matches = set()
         for match in config.pattern.finditer(bases):
             a, b = match.span()
-            a += self.start
-            b += self.start
-            matches.update(range(a - config.WINDOW_SIZE // 2, a)) # Window left.
-            matches.update(range(a, b)) # The match itself.
-            matches.update(range(b, b + config.WINDOW_SIZE // 2)) # Window right.
+            matches.update(range(a + self.start, b + self.start))
 
         return matches
 
