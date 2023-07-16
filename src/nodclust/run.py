@@ -13,13 +13,13 @@ import astropy.stats
 import kmeans1d
 import numpy as np
 
-from nodclust.concat import Signal, concat_pairs
-from nodclust.config import Config
-from nodclust.distsum import distsum
-from nodclust.fast5 import Fast5
-from nodclust.helpers import position_within_bounds, timer
+from modena.concat import Signal, concat_pairs
+from modena.config import Config
+from modena.distsum import distsum
+from modena.fast5 import Fast5
+from modena.helpers import position_within_bounds, timer
 
-log = logging.getLogger("nodclust")
+log = logging.getLogger("modena")
 
 
 def compare_datasets(config: Config) -> None:
