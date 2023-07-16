@@ -6,11 +6,11 @@ from typing import Iterator, List, Tuple
 
 import numpy as np
 
-from nodclust.config import Config
-from nodclust.fast5 import Fast5
-from nodclust.helpers import position_within_bounds
+from modena.config import Config
+from modena.fast5 import Fast5
+from modena.helpers import position_within_bounds
 
-log = logging.getLogger("nodclust")
+log = logging.getLogger("modena")
 
 
 @dataclass
