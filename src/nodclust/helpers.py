@@ -4,10 +4,10 @@ import contextlib
 import logging
 from timeit import default_timer
 
-from nodclust.config import Config
-from nodclust.fast5 import PATTERN_MATCH_POSITIONS
+from modena.config import Config
+from modena.fast5 import PATTERN_MATCH_POSITIONS
 
-log = logging.getLogger("nodclust")
+log = logging.getLogger("modena")
 
 
 def position_within_bounds(
