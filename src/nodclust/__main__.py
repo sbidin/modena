@@ -16,7 +16,7 @@ try:
 except ValueError:
     logging.basicConfig(level="INFO")
 finally:
-    log = logging.getLogger("nodclust")
+    log = logging.getLogger("modena")
 
 
 @click.command()
