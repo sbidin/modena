@@ -3,7 +3,7 @@
 from collections import deque
 from typing import Deque, Iterator, Tuple
 
-from nodclust.config import Config
+from modena.config import Config
 
 
 def distsum(
