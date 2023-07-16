@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Iterator
 
 import pytest
-from nodclust.config import Config
-from nodclust.run import compare_datasets
+from modena.config import Config
+from modena.run import compare_datasets
 
 
 def _param_combos() -> Iterator[tuple]:
