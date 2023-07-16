@@ -8,8 +8,8 @@ from typing import Any, Dict
 
 import click
 
-from nodclust.config import Config
-from nodclust.run import compare_datasets
+from modena.config import Config
+from modena.run import compare_datasets
 
 try:
     logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
