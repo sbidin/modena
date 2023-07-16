@@ -13,9 +13,9 @@ from typing import Iterator, Optional
 import h5py
 import numpy as np
 
-from nodclust.config import Config
+from modena.config import Config
 
-log = logging.getLogger("nodclust")
+log = logging.getLogger("modena")
 
 
 # A global containing all positions that match the configured pattern. To be
