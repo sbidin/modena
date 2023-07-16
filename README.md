@@ -1,4 +1,4 @@
-# nodclust
+# modena
 
 A nanopore-based computational method for detecting a wide spectrum of
 epigenetic/epitranscriptomic modifications.
@@ -16,21 +16,21 @@ Supports Python 3.8 or greater.
 ### Install and run locally
 ```shell
 $ python -m pip install -e . # Install.
-$ python -m nodclust path/dataset1 path/dataset2 output.bed # Run.
-$ python -m nodclust --help # See options.
+$ python -m modena path/dataset1 path/dataset2 output.bed # Run.
+$ python -m modena --help # See options.
 ```
 
 ### Install and run via docker
 ```shell
-$ docker build . -t nodclust # Build docker image.
-$ docker run -v `pwd`:`pwd` -w `pwd` --rm -it nodclust ./dataset1 ./dataset2 output.bed # Run.
-$ docker run --rm -it nodclust --help # See options.
+$ docker build . -t modena # Build docker image.
+$ docker run -v `pwd`:`pwd` -w `pwd` --rm -it modena ./dataset1 ./dataset2 output.bed # Run.
+$ docker run --rm -it modena --help # See options.
 ```
 
 ### Options
 A quick overview of the available options can be seen via `--help`:
 ```text
-Usage: nodclust [OPTIONS] DATASET1 DATASET2 OUTPUT_BED
+Usage: modena [OPTIONS] DATASET1 DATASET2 OUTPUT_BED
 
   Compare two datasets & output an annotated bedMethyl file.
 
@@ -52,10 +52,10 @@ Options:
 ### Example dataset
 Small example DNA and RNA datasets are included in the repository within
 `/tests/inp` and will be cloned alongside the repo if you have `git-lfs`
-installed. Here's an example of how `nodclust` could be run on the RNA
+installed. Here's an example of how `modena` could be run on the RNA
 datasets:
 ```shell
-$ python -m nodclust tests/inp/rna-{1,2} out.bed
+$ python -m modena tests/inp/rna-{1,2} out.bed
 ```
 
 ### Supported input formats
