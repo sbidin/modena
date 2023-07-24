@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="nodclust",
+    name="modena",
     version="0.1.0",
     python_requires=">=3.8",
     package_dir={"": "src"},
