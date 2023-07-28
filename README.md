@@ -1,17 +1,13 @@
 # modena
 
-A nanopore-based computational method for detecting a wide spectrum of
-epigenetic/epitranscriptomic modifications.
+Modena is a nanopore-based computational method for detecting a wide spectrum
+of epigenetic and epitranscriptomic modifications.
 
-This application is the implementation of an unsupervised approach for detecting
-a diverse range of epigenetic and epitranscriptomic modifications. Using a
-combination of the Kuiper test and 1D clustering, this method exhibits an
-average F1-score of 0.746, significantly outperforming rival methods whose
-average F1-scores fluctuate between 0.244 and 0.512. We depart from the common
-paradigm by using one-dimensional clustering to establish the classification
-threshold.
+It uses an unsupervised learning approach, namely resampling of nanopore
+signals followed by the Kuiper test. Unlike other unsupervised tools,
+classification is performed by 1D clustering of scores into two groups.
 
-Supports Python 3.8 or greater.
+Supports Python 3.8 or newer.
 
 ### Install and run locally
 ```shell
