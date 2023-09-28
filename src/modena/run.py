@@ -181,4 +181,4 @@ def _cluster_output(config: Config) -> None:
             f.write("\n")
 
     # Overwrite the original output with the assigned-labels one.
-    os.rename(output_annotated, config.output_bed)
+    os.replace(output_annotated, config.output_bed)
