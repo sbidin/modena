@@ -11,14 +11,18 @@ Supports Python 3.8 or newer.
 
 ### Install and run locally
 ```shell
-$ python -m pip install -e . # Install.
-$ python -m modena path/dataset1 path/dataset2 output.bed # Run.
+$ git clone https://github.com/sbidin/modena.git # Clone this repository.
+$ cd modena # Enter the cloned repository.
+$ python -m pip install -e . # Install locally.
 $ python -m modena --help # See options.
+$ python -m modena path/dataset1 path/dataset2 output.bed # Run.
 ```
 
 ### Install and run via docker
 ```shell
-$ docker build . -t modena # Build docker image.
+$ git clone https://github.com/sbidin/modena.git # Clone this repository.
+$ cd modena # Enter the cloned repository.
+$ docker build . -t modena # Build a docker image.
 $ docker run -v `pwd`:`pwd` -w `pwd` --rm -it modena ./dataset1 ./dataset2 output.bed # Run.
 $ docker run --rm -it modena --help # See options.
 ```
