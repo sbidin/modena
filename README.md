@@ -36,6 +36,10 @@ datasets:
 $ python -m modena tests/inp/rna-{1,2} out.bed
 ```
 
+Larger example datasets are available on Zenodo:
+* RNA https://zenodo.org/records/8421288 and https://zenodo.org/records/8436812
+* DNA https://zenodo.org/records/10031901
+
 ### Supported input formats
 Only single-FAST5 files processed by
 [tombo](https://nanoporetech.github.io/tombo/index.html) are supported. If your
