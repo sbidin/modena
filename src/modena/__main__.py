@@ -6,9 +6,11 @@ import collections
 import contextlib
 import math
 import os
+import sys
 from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from timeit import default_timer
 from typing import Any, TextIO
 
@@ -20,6 +22,73 @@ import pyslow5
 from cachetools import LRUCache, cached
 from loguru import logger
 from scipy.stats import median_abs_deviation
+
+
+@dataclass
+class Config:
+    """A bundle of all application configuration values."""
+    blow5_x: Path  # 1st dataset's BLOW5/SLOW5 file.
+    blow5_y: Path  # 2nd dataset's BLOW5/SLOW5 file.
+    squig_x: Path  # 1st dataset's f5c resquiggle TSV file.
+    squig_y: Path  # 2nd dataset's f5c resquiggle TSV file.
+    coverage: int  # Minimum coverage a position needs to have, per-dataset.
+    resample: int  # How many times to resample each position's signal.
+    output: Path   # Path of output BED file.
+
+    @staticmethod
+    def build(args: dict[str, Any]) -> "Config":
+        """Create a `Config` given `click` commandline arguments."""
+        # Check file inputs.
+        blow5_x, squig_x = map(Path, args["xs"])
+        blow5_y, squig_y = map(Path, args["ys"])
+        for path in (blow5_x, blow5_y, squig_x, squig_y):
+            if not path.exists():
+                logger.error(f"no such file: {path}")
+                sys.exit(1)
+
+        # Check minimum coverage.
+        coverage = args["coverage"]
+        if coverage <= 0:
+            logger.error("coverage needs to be at least 1")
+            sys.exit(1)
+
+        # Check resample size.
+        resample = args["resample"]
+        if resample < 0:
+            logger.error("resample needs to be at least 0 (disabled) or higher")
+            sys.exit(1)
+        if resample == 0:
+            resample = None
+
+        # Check output path.
+        output = Path(args["output"])
+        if output.is_dir():
+            logger.error("output path must point to file, not directory")
+            sys.exit(1)
+        if output.exists():
+            logger.warning("output path already exists, will overwrite")
+
+        return Config(
+            blow5_x=blow5_x,
+            blow5_y=blow5_y,
+            squig_x=squig_x,
+            squig_y=squig_y,
+            coverage=coverage,
+            resample=resample,
+            output=output,
+        )
+
+
+@click.command()
+@click.option("-1", "xs", type=str, nargs=2, required=True)
+@click.option("-2", "ys", type=str, nargs=2, required=True)
+@click.option("-p", "--position", type=str, default="-")
+@click.option("-r", "--resample", type=int, default=15)
+@click.option("-c", "--coverage", type=int, default=20)
+@click.option("-o", "--output", type=str, required=True)
+def cli(**kwargs: dict[str, str | int]) -> None:
+    """Collect command-line arguments into a `Config` and run Modena."""
+    run(Config.build(kwargs))
 
 
 def distsum(
@@ -271,34 +340,16 @@ def label_output(out_path: str) -> None:
     os.replace(output_annotated, out_path)
 
 
-@dataclass
-class Config:
-    """A bundle of all application configuration values."""
-    xs: list[str]
-    ys: list[str]
-    position: str
-    coverage: int
-    out: str
-    resample: int
-
-    @staticmethod
-    def build(kwargs: dict[str, Any]) -> "Config":
-        """Create a `Config` given `click` commandline arguments."""
-        # TODO: Check config for validity, transform values.
-        config = Config(**kwargs)
-        return config
-
-
 def run(conf: Config)  -> None:
     """Run a Modena comparison between two datasets."""
     # Load first dataset.
-    raw_x, idx_x = conf.xs
+    raw_x, idx_x = str(conf.blow5_x), conf.squig_x
     ids_x = get_read_ids(raw_x)
     idx_x, min_pos_x, max_pos_x = index_reads_by_position(idx_x, ids_x)
     del ids_x
 
     # Load second dataset.
-    raw_y, idx_y = conf.ys
+    raw_y, idx_y = str(conf.blow5_y), conf.squig_y
     ids_y = get_read_ids(raw_y)
     idx_y, min_pos_y, max_pos_y = index_reads_by_position(idx_y, ids_y)
     del ids_y
@@ -317,7 +368,7 @@ def run(conf: Config)  -> None:
     # Run the comparison.
     f_x = pyslow5.Open(raw_x, "r")
     f_y = pyslow5.Open(raw_y, "r")
-    f_out = open(conf.out, "w")
+    f_out = open(conf.output, "w")
 
     def results_at_positions():
         for pos in range(min_pos, max_pos + 1):
@@ -358,20 +409,10 @@ def run(conf: Config)  -> None:
     f_out.close()
 
     logger.info("clustering output, labeling as positive or negative")
-    label_output(conf.out)
-    logger.info("success, results are in", conf.out)
+    label_output(conf.output)
+    logger.info("success, results are in", conf.output)
 
 
-@click.command()
-@click.option("-1", "xs", type=str, nargs=2, required=True)
-@click.option("-2", "ys", type=str, nargs=2, required=True)
-@click.option("-p", "--position", type=str, default="-")
-@click.option("-r", "--resample", type=int, default=15)
-@click.option("-c", "--coverage", type=int, default=20)
-@click.option("-o", "--out", type=str, required=True)
-def cli(**kwargs: dict[str, str | int]) -> None:
-    """Collect command-line arguments into a `Config` and run Modena."""
-    run(Config.build(kwargs))
 
 
 if __name__ == "__main__":
