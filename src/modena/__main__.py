@@ -3,7 +3,6 @@
 """Detect epigenetic and epitranscriptomic modifications."""
 
 import collections
-import contextlib
 import math
 import os
 import sys
@@ -11,7 +10,6 @@ from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from timeit import default_timer
 from typing import Any, BinaryIO, TextIO
 
 import astropy.stats
