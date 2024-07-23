@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from timeit import default_timer
-from typing import Any, TextIO
+from typing import Any, BinaryIO, TextIO
 
 import astropy.stats
 import click
@@ -23,17 +23,25 @@ from cachetools import LRUCache, cached
 from loguru import logger
 from scipy.stats import median_abs_deviation
 
+# Configure logger to skip outputting code location.
+logger.remove()
+logger.add(
+    sys.stderr,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> <level>{level}</level> {message}",
+    level=os.getenv("LOGLEVEL", "INFO"),
+)
 
 @dataclass
 class Config:
     """A bundle of all application configuration values."""
-    blow5_x: Path  # 1st dataset's BLOW5/SLOW5 file.
-    blow5_y: Path  # 2nd dataset's BLOW5/SLOW5 file.
-    squig_x: Path  # 1st dataset's f5c resquiggle TSV file.
-    squig_y: Path  # 2nd dataset's f5c resquiggle TSV file.
+
+    blow5_x: Path  # 1st dataset's blow5/slow5 file.
+    blow5_y: Path  # 2nd dataset's blow5/slow5 file.
+    squig_x: Path  # 1st dataset's f5c resquiggle tsv file.
+    squig_y: Path  # 2nd dataset's f5c resquiggle tsv file.
     coverage: int  # Minimum coverage a position needs to have, per-dataset.
     resample: int  # How many times to resample each position's signal.
-    output: Path   # Path of output BED file.
+    output: Path   # Path of output labeled tsv file.
 
     @staticmethod
     def build(args: dict[str, Any]) -> "Config":
@@ -91,7 +99,187 @@ def cli(**kwargs: dict[str, str | int]) -> None:
     run(Config.build(kwargs))
 
 
-def distsum(
+def run(conf: Config)  -> None:
+    """Detect modifications and output per-position results."""
+    # Load and index both datasets.
+    ids_x = get_all_read_ids(conf.blow5_x)
+    idx_x, min_pos_x, max_pos_x = index_squiggles_by_position(conf.squig_x, ids_x)
+    del ids_x
+    ids_y = get_all_read_ids(conf.blow5_y)
+    idx_y, min_pos_y, max_pos_y = index_squiggles_by_position(conf.squig_y, ids_y)
+    del ids_y
+
+    # Find overlapping positions.
+    min_pos = max(min_pos_x, min_pos_y)
+    max_pos = min(max_pos_x, max_pos_y)
+    logger.info(f"processing positions between {min_pos} and {max_pos}")
+
+    # Remove non-overlapping positions from both indexes.
+    trim_index(conf.squig_x, idx_x, min_pos, max_pos)
+    trim_index(conf.squig_y, idx_y, min_pos, max_pos)
+
+    # Run the comparison.
+    f_x = pyslow5.Open(str(conf.blow5_x), "r")
+    f_y = pyslow5.Open(str(conf.blow5_y), "r")
+    with open(conf.output, "w") as f_out:
+        print_header(f_out)
+        results = compare_position_pairs(conf, f_x, f_y, idx_x, idx_y, min_pos, max_pos)
+        results = distance_summing(results)
+        count = 0
+        for result in results:
+            print_result(*result, f_out)
+            count += 1
+
+    logger.info(f"compared {count} total positions")
+
+    # Sanity checking.
+    assert len(idx_x) == 0
+    assert len(idx_y) == 0
+
+    # Cleanup.
+    f_y.close()
+    f_x.close()
+    f_out.close()
+
+    # Apply kmeans1d clustering.
+    cluster_output(conf.output)
+
+
+def get_all_read_ids(blow5_path: Path) -> set[str]:
+    """Get all read IDs from the given BLOW5 file."""
+    logger.info(f"indexing dataset {blow5_path}")
+    f = pyslow5.Open(str(blow5_path), "r")
+    ids, num_reads = f.get_read_ids()
+    logger.info(f"found {num_reads} unique reads")
+    f.close()
+    if not num_reads:
+        logger.error(f"no reads found in {blow5_path}")
+        sys.exit(1)
+    return set(ids)
+
+
+# An index of positions to (read id, squiggle from, squiggle to) pairs.
+PositionIndex = dict[int, set[tuple[str, int, int]]]
+
+
+def index_squiggles_by_position(
+        idx_path: Path,
+        read_ids: set[str]) \
+        -> PositionIndex:
+    """Create an index of squiggles across all reads, by position."""
+    logger.info(f"indexing squiggles {idx_path}")
+    idx = collections.defaultdict(set)  # The index itself.
+
+    # Various counters for logging purposes.
+    uniq_reads = set()
+    num_squiggles = 0
+    num_missing = 0
+    num_skipped = 0
+    min_position = math.inf
+    max_position = 0
+
+    # Build the index by iterating through all read/position lines.
+    with open(idx_path) as tsv:
+        tsv.readline()  # Discard the header.
+
+        for line in tsv:
+            # Unpack columns.
+            read_id, pos, start, end = line.strip().split("\t")
+
+            # Skip loading ids that are not in the blow5 file to begin with.
+            if read_id not in read_ids:
+                num_skipped += 1
+                continue
+
+            # Skip unknown squiggle positions.
+            if start == "." or end == ".":
+                num_missing += 1
+                continue
+
+            pos, start, end = int(pos), int(start), int(end)
+            assert start < end, "squiggle start position is after its end"
+
+            # Update index and counters.
+            idx[pos].add((read_id, start, end))
+            uniq_reads.add(read_id)
+            num_squiggles += 1
+            min_position = min(min_position, pos)
+            max_position = max(max_position, pos)
+
+    # Check and log a bunch of stuff to make sure we have somewhat correct data.
+    logger.info(f"minimum found position is {min_position}")
+    logger.info(f"maximum found position is {max_position}")
+    logger.info(f"indexed {len(idx)} unique positions")
+    logger.info(f"indexed {len(uniq_reads)} unique reads")
+    if not uniq_reads:
+        logger.error(f"no reads found in {idx_path}")
+        sys.exit(1)
+    logger.info(f"indexed {num_squiggles} total squiggles")
+    if num_missing:
+        logger.warning(f"skipped {num_missing} squiggles due to missing markers")
+    if num_skipped:
+        logger.warning(f"skipped {num_skipped} reads due to missing in blow5 file")
+
+    return idx, min_position, max_position
+
+
+def trim_index(
+        idx_path: Path,
+        idx: PositionIndex,
+        min_pos: int,
+        max_pos: int) \
+        -> None:
+    """Trim the index to contain only the given span of positions."""
+    logger.info(f"trimming index for {idx_path}")
+    size_old = len(idx)
+    for pos in list(idx):
+        if pos < min_pos or pos > max_pos:
+            del idx[pos]
+    logger.info(f"removed {size_old - len(idx)} positions")
+
+
+# A comparison result: position, Kuiper distance and total coverage.
+Result = tuple[int, float, int]
+
+
+def compare_position_pairs(
+        conf: Config,
+        f_x: BinaryIO,
+        f_y: BinaryIO,
+        idx_x: PositionIndex,
+        idx_y: PositionIndex,
+        min_pos: int,
+        max_pos: int) \
+        -> Iterator[Result]:
+    """Compare signals at same positions from both datasets."""
+    for pos in range(min_pos, max_pos + 1):
+        # A bit of progress tracking.
+        if (pos - min_pos) % 1000 == 0:
+            logger.info(f"comparing position {pos + 1}...")
+
+        # Compare signals if filters satisfied.
+        if pos not in idx_x or pos not in idx_y:
+            logger.debug(f"skipped position {pos + 1} due to no overlap")
+        elif len(idx_x[pos]) < conf.coverage or len(idx_y[pos]) < conf.coverage:
+            logger.debug(f"skipped position {pos + 1} due to insufficient coverage")
+        else:
+            signals_x, signals_y = [], []
+            for squig in (get_squiggle(conf, f_x, *s) for s in idx_x[pos]):
+                signals_x.extend(squig)
+            for squig in (get_squiggle(conf, f_y, *s) for s in idx_y[pos]):
+                signals_y.extend(squig)
+            signals_x, signals_y = np.array(signals_x), np.array(signals_y)
+            dist = kuiper(signals_x, signals_y)
+            yield pos, dist, len(idx_x[pos]) + len(idx_y[pos])
+
+        # Clear index for the processed position.
+        if pos in idx_x:
+            del idx_x[pos]
+        if pos in idx_y:
+            del idx_y[pos]
+
+
+def distance_summing(
         stats: Iterator[tuple[int, float]],
         window_size: int = 5) \
         -> Iterator[tuple[int, float]]:
@@ -136,129 +324,30 @@ def _distsum_at(
     yield (window[i][0], sum_dists, *window[i][2:])
 
 
-# def position_within_bounds(
-#         pos: int,
-#         config: Config,
-#         with_window: bool=False) \
-#         -> bool:
-#     """Return whether a position satisfies various filters."""
-#     pos += 1 # Perform from/to bounds checks in 1-based indexing.
-
-#     # Check left bound.
-#     if config.from_position is not None:
-#         left = config.from_position
-#         if with_window:
-#             left -= config.WINDOW_SIZE // 2
-#         if pos < left:
-#             return False
-
-#     # Check right bound.
-#     if config.to_position is not None:
-#         right = config.to_position
-#         if with_window:
-#             right += config.WINDOW_SIZE // 2
-#         if pos > right:
-#             return False
-
-#     return True
-
-
-@contextlib.contextmanager
-def timer(message: str) -> None:
-    """Output how long a block of code took to execute."""
-    time_from = default_timer()
-    yield
-    seconds = default_timer() - time_from
-    logger.info(f"{message} took {seconds:.3f} seconds")
-
-
-def get_read_ids(slow_path: str) -> set[str]:
-    """Get all read IDs from the given SLOW5 file."""
-    logger.info("opening and indexing", slow_path)
-    f = pyslow5.Open(slow_path, "r")
-    ids, num_reads = f.get_read_ids()
-    logger.info("found", num_reads, "reads")
-    f.close()
-    return set(ids)
-
-
-def index_reads_by_position(idx_path: str, ids: set[str]) -> dict[int, set[tuple[str, int, int]]]:
-    """Create an index of reads by position."""
-    idx = collections.defaultdict(set)
-    uniq_reads = set()
-    num_squiggles = 0
-    num_missing = 0
-    num_skipped = 0
-    min_position = math.inf
-    max_position = 0
-
-    logger.info(f"indexing squiggles {idx_path} by position")
-    with open(idx_path) as tsv:
-        tsv.readline()  # discard header
-        for line_raw in tsv:
-            line = line_raw.strip().split("\t")
-            read_id, pos, start, end = line
-
-            # Skip loading ids that are not in the slow5 file to begin with.
-            if read_id not in ids:
-                num_skipped += 1
-                continue
-
-            if start == "." or end == ".":
-                num_missing += 1
-                continue
-
-            # TODO: Handle DNA vs RNA differences.
-            pos, start, end = int(pos), int(start), int(end)
-            assert start < end
-            idx[pos].add((read_id, start, end))
-            uniq_reads.add(read_id)
-            num_squiggles += 1
-
-            min_position = min(min_position, pos)
-            max_position = max(max_position, pos)
-
-    logger.info("min position is", min_position)
-    logger.info("max position is", max_position)
-    logger.info("indexed", len(idx), "unique positions")
-    logger.info("indexed", len(uniq_reads), "unique reads")
-    logger.info("indexed", num_squiggles, "total squiggles")
-    logger.info("skipped", num_missing, "squiggles due to missing signal markers")
-    logger.info("skipped", num_skipped, "reads due to not having signal data")
-    return idx, min_position, max_position
-
-
-@cached(cache=LRUCache(maxsize=1e9//4, getsizeof=len), key=lambda _, read_id: read_id)
-def get_signal_by_read_id(f, read_id: str) -> np.ndarray:
-    """Get a read's full signal."""
+@cached(cache=LRUCache(maxsize=1e9, getsizeof=len), key=lambda _, read_id: read_id)
+def get_signal_by_read_id(f: BinaryIO, read_id: str) -> np.ndarray:
+    """Get a read's full signal, caching the output."""
     read = f.get_read(read_id, pA=True, aux=None)
     signal = read["signal"]
     scale = median_abs_deviation(signal)
     signal -= np.median(signal)
     signal /= scale
-    #signal = np.flip(signal)  # TODO: Don't do this if DNA.
-    # TODO: Check if works for DNA without flipping, it should.
     return signal
 
 
-def get_squiggle(f, read_id: str, a: int, b: int) -> np.ndarray:
+def get_squiggle(
+        conf: Config,
+        f: BinaryIO,
+        read_id: str,
+        a: int,
+        b: int) \
+        -> np.ndarray:
     """Get a single squiggle between points a and b."""
     assert a <= b
     signal = get_signal_by_read_id(f, read_id)
-    # TODO: Handle DNA vs RNA differences.
     signal = signal[a:b]
-    signal = np.random.choice(signal, size=30, replace=True)  # TODO: Configurable size!
+    signal = np.random.choice(signal, size=conf.resample, replace=True)  # Resampling.
     return signal
-
-
-def concat_signals_by_position(f, idx, pos: int) -> tuple[np.ndarray, int]:
-    """Get a concatenated signal for all reads of a given position."""
-    signals = []
-
-    for squig in idx[pos]:
-        signals.extend(get_squiggle(f, *squig))
-
-    return np.array(signals), len(idx[pos])
 
 
 def kuiper(x: np.ndarray, y: np.ndarray) -> float:
@@ -269,59 +358,40 @@ def kuiper(x: np.ndarray, y: np.ndarray) -> float:
     return dist
 
 
-def print_bed_line(
-        # chromosome: str,
-        # strand: str,
+def print_header(out_file: TextIO) -> None:
+    """Print the header for the output file."""
+    print("pos\tcov\tdist\tlabel", file=out_file)
+
+
+def print_result(
         pos: int,
         dist: float,
         coverage: int,
         out_file: TextIO) \
         -> None:
-    """Emit a single line in the bedMethly format."""
+    """Emit a single line for a given result."""
     out = out_file.write
-
-    # The first 11 columns are defined by the bedMethyl format.
-    out("_ ") # TODO: f"{chromosome} ") # col 1, reference chromosome
-    out(f"{pos + 1} ") # col 2, position from
-    out(f"{pos + 2} ") # col 3, position to
-    out("_ ") # col 4, name of item
-    out("_ ") # col 5, score from 1 to 1000, capped number of reads TODO
-    out("_ ") # TODO: f"{strand} ") # col 6, strand
-    out("_ ") # col 7, start of where display should be thick
-    out("_ ") # col 8, end of where display should be thick
-    out("_ ") # col 9, color value
-    out(f"{coverage} ") # col 10, coverage, or number of reads
-    out("_ ") # col 11, percentage of reads that show methylation at this position TODO
-
-    # All further columns are custom extensions of the format.
-    out(f"{dist:.5f} ") # col 12, kuiper distance
+    out(f"{pos + 1}\t") # col 1, position, 1-based
+    out(f"{coverage}\t") # col 2, total position coverage, summed across both datasets
+    out(f"{dist:.5f}") # col 3, kuiper distance
+    # col 4 is added later by clustering and is a pos/neg label
     out("\n")
 
 
-def trim_index(idx, min_pos: int, max_pos: int) -> None:
-    """Trim the index to contain only the given span of positions."""
-    size = len(idx)
-    for pos in list(idx):
-        if pos < min_pos or pos > max_pos:
-            del idx[pos]
+def cluster_output(out_path: Path) -> None:
+    """Assign positive and negative labels to the unlabeled tsv file."""
+    logger.info("clustering output into positive/negative via kmeans1d")
 
-    logger.info("trimmed out", size - len(idx), "positions")
-
-
-def label_output(out_path: str) -> None:
-    """Assign positive and negative labels to an annotated BED file.
-
-    This will read the output BED file and overwrite it with a labeled version.
-    """
     # Read entire file.
     with open(out_path) as f:
-        lines = [line.split() for line in f.read().splitlines()]
+        lines = [line.split("\t") for line in f.read().splitlines()]
+        lines = lines[1:]  # Skip the header.
         if not lines:
             logger.warning("output file is empty, no clustering performed")
             return
 
     # Assign labels.
-    scores = [float(line[11]) for line in lines]
+    scores = [float(line[2]) for line in lines]
     labels, _ = kmeans1d.cluster(scores, 2)
     assert len(scores) == len(labels)
 
@@ -331,88 +401,15 @@ def label_output(out_path: str) -> None:
     # Output same file, but with assigned labels, to a different file.
     output_annotated = str(out_path) + ".modena-in-progress"
     with open(output_annotated, "w") as f:
+        print_header(f)
         for line, label in zip(lines, labels, strict=False):
             line.append("pos" if label == pos_label else "neg")
-            f.write(" ".join(line))
+            f.write("\t".join(line))
             f.write("\n")
 
     # Overwrite the original output with the assigned-labels one.
     os.replace(output_annotated, out_path)
-
-
-def run(conf: Config)  -> None:
-    """Run a Modena comparison between two datasets."""
-    # Load first dataset.
-    raw_x, idx_x = str(conf.blow5_x), conf.squig_x
-    ids_x = get_read_ids(raw_x)
-    idx_x, min_pos_x, max_pos_x = index_reads_by_position(idx_x, ids_x)
-    del ids_x
-
-    # Load second dataset.
-    raw_y, idx_y = str(conf.blow5_y), conf.squig_y
-    ids_y = get_read_ids(raw_y)
-    idx_y, min_pos_y, max_pos_y = index_reads_by_position(idx_y, ids_y)
-    del ids_y
-
-    # Find overlapping positions.
-    min_pos = max(min_pos_x, min_pos_y)
-    max_pos = min(max_pos_x, max_pos_y)
-    logger.info("comparing positions between", min_pos, "and", max_pos)
-
-    # Remove non-overlapping positions from indexes.
-    logger.info("trimming index for", raw_x)
-    trim_index(idx_x, min_pos, max_pos)
-    logger.info("trimming index for", raw_y)
-    trim_index(idx_y, min_pos, max_pos)
-
-    # Run the comparison.
-    f_x = pyslow5.Open(raw_x, "r")
-    f_y = pyslow5.Open(raw_y, "r")
-    f_out = open(conf.output, "w")
-
-    def results_at_positions():
-        for pos in range(min_pos, max_pos + 1):
-            if (pos - min_pos) % 1000 == 0:
-                logger.info(f"comparing position {pos}...")
-
-            if pos not in idx_x or pos not in idx_y:
-                logger.info("position", pos, "skipped, no overlap")
-                if pos in idx_x:
-                    del idx_x[pos]
-                if pos in idx_y:
-                    del idx_y[pos]
-                continue
-
-            signals_x, coverage_x = concat_signals_by_position(f_x, idx_x, pos)
-            signals_y, coverage_y = concat_signals_by_position(f_y, idx_y, pos)
-
-            min_coverage = 75  # TODO: Configurable!
-            if coverage_x >= min_coverage and coverage_y >= min_coverage:
-                dist = kuiper(signals_x, signals_y)
-                yield pos, dist, coverage_x + coverage_y
-
-            del idx_x[pos]
-            del idx_y[pos]
-
-    results = results_at_positions()
-    results = (r for r in results if r is not None)
-    results = distsum(results)
-
-    for r in results:
-        print_bed_line(*r, f_out)
-
-    assert len(idx_x) == 0
-    assert len(idx_y) == 0
-
-    f_y.close()
-    f_x.close()
-    f_out.close()
-
-    logger.info("clustering output, labeling as positive or negative")
-    label_output(conf.output)
-    logger.info("success, results are in", conf.output)
-
-
+    logger.info(f"all done, results are stored into {out_path}")
 
 
 if __name__ == "__main__":
