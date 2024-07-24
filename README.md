@@ -31,10 +31,11 @@ $ f5c resquiggle data.fastq data.blow5 > resquiggled.tsv
 ```
 
 ### example modena usage
-Both datasets need a `blow5` or `slow5` file and a corresponding
-`f5c`-resquiggled `tsv` file.
+Both datasets (in this case `a` and `b`) need a `blow5` or `slow5` file and a
+corresponding `f5c`-resquiggled `tsv` file. Note that the order of `blow5` and
+`tsv` inputs given as arguments is important.
 ```shell
-$ poetry run python -m modena -1 a.blow5 a.tsv -2 b.blow5 b.tsv -o out.tsv
+$ poetry run python -m modena a.blow5 a.tsv b.blow5 b.tsv -o out.tsv
 $ poetry run python -m modena --help # See here for more options.
 ```
 

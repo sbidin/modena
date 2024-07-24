@@ -45,8 +45,8 @@ class Config:
     def build(args: dict[str, Any]) -> "Config":
         """Create a `Config` given `click` commandline arguments."""
         # Check file inputs.
-        blow5_x, squig_x = map(Path, args["xs"])
-        blow5_y, squig_y = map(Path, args["ys"])
+        blow5_x, squig_x = Path(args["blow5_x"]), Path(args["squig_x"])
+        blow5_y, squig_y = Path(args["blow5_y"]), Path(args["squig_y"])
         for path in (blow5_x, blow5_y, squig_x, squig_y):
             if not path.exists():
                 logger.error(f"no such file: {path}")
@@ -86,14 +86,15 @@ class Config:
 
 
 @click.command()
-@click.option("-1", "xs", type=str, nargs=2, required=True)
-@click.option("-2", "ys", type=str, nargs=2, required=True)
-@click.option("-p", "--position", type=str, default="-")
-@click.option("-r", "--resample", type=int, default=15)
-@click.option("-c", "--coverage", type=int, default=20)
-@click.option("-o", "--output", type=str, required=True)
+@click.argument("blow5_x")
+@click.argument("squig_x")
+@click.argument("blow5_y")
+@click.argument("squig_y")
+@click.option("-r", "--resample", type=int, default=15, help="resample signals to this size (default 15)")
+@click.option("-c", "--coverage", type=int, default=20, help="ignore positions below this coverage (default 20)")
+@click.option("-o", "--output", type=str, required=True, help="output file path")
 def cli(**kwargs: dict[str, str | int]) -> None:
-    """Collect command-line arguments into a `Config` and run Modena."""
+    """Detect modifications and output per-position results."""
     run(Config.build(kwargs))
 
 
