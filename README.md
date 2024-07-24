@@ -46,6 +46,6 @@ Modena outputs a simple `tsv` file with four columns:
 * label, `str`, `"pos"` or `"neg"`, separating positions into two clusters
 
 ### notes
-An older version of Modena supported only `fast5` files resquiggled by
+Modena v1 supported only `fast5` files resquiggled by
 [tombo](https://nanoporetech.github.io/tombo/index.html). If you have an older
 dataset processed by tombo and wish to use it, visit [tag v1.0.0](https://github.com/sbidin/modena/tree/v1.0.0).
