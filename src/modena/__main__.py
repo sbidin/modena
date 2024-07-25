@@ -54,7 +54,12 @@ class Config:
 
         # Check minimum coverage.
         coverage = args["coverage"]
-        if coverage <= 0:
+        try:
+            coverage = "auto" if coverage == "auto" else int(coverage)
+        except ValueError:
+            logger.error("coverage needs to be 'auto' or a valid integer")
+            sys.exit(1)
+        if isinstance(coverage, int) and coverage <= 0:
             logger.error("coverage needs to be at least 1")
             sys.exit(1)
 
@@ -91,7 +96,7 @@ class Config:
 @click.argument("blow5_y")
 @click.argument("squig_y")
 @click.option("-r", "--resample", type=int, default=15, help="resample signals to this size (default 15)")
-@click.option("-c", "--coverage", type=int, default=20, help="ignore positions below this coverage (default 20)")
+@click.option("-c", "--coverage", type=str, default="auto", help="ignore positions below this coverage (default auto)")
 @click.option("-o", "--output", type=str, required=True, help="output file path")
 def cli(**kwargs: dict[str, str | int]) -> None:
     """Detect modifications and output per-position results."""
@@ -113,6 +118,14 @@ def run(conf: Config)  -> None:
     max_pos = min(max_pos_x, max_pos_y)
     logger.info(f"processing positions between {min_pos} and {max_pos}")
 
+    # If coverage is automatic, pick the mean value.
+    if not isinstance(conf.coverage, int):
+        coverages = list(map(len, idx_x.values()))
+        coverages.extend(map(len, idx_y.values()))
+        conf.coverage = int(np.mean(coverages))
+        logger.info(f"using minimum coverage {conf.coverage}")
+        del coverages
+
     # Remove non-overlapping positions from both indexes.
     trim_index(conf.squig_x, idx_x, min_pos, max_pos)
     trim_index(conf.squig_y, idx_y, min_pos, max_pos)
@@ -124,12 +137,20 @@ def run(conf: Config)  -> None:
         print_header(f_out)
         results = compare_position_pairs(conf, f_x, f_y, idx_x, idx_y, min_pos, max_pos)
         results = distance_summing(results)
-        count = 0
-        for result in results:
-            print_result(*result, f_out)
-            count += 1
+        num_ok = 0
+        num_skipped_no_coverage = 0
+        for pos, dist, cov_x, cov_y in results:
+            if cov_x < conf.coverage or cov_y < conf.coverage:
+                logger.debug(f"skipped position {pos + 1} due to insufficient coverage")
+                num_skipped_no_coverage += 1
+                continue
 
-    logger.info(f"compared {count} total positions")
+            print_result(pos, dist, cov_x + cov_y, f_out)
+            num_ok += 1
+
+    logger.info(f"compared {num_ok} total positions")
+    if num_skipped_no_coverage:
+        logger.warning(f"skipped {num_skipped_no_coverage} positions due to insufficient coverage")
 
     # Sanity checking.
     assert len(idx_x) == 0
@@ -251,6 +272,8 @@ def compare_position_pairs(
         max_pos: int) \
         -> Iterator[Result]:
     """Compare signals at same positions from both datasets."""
+    num_skipped_no_overlap = 0
+
     for pos in range(min_pos, max_pos + 1):
         # A bit of progress tracking.
         if (pos - min_pos) % 1000 == 0:
@@ -259,8 +282,7 @@ def compare_position_pairs(
         # Compare signals if filters satisfied.
         if pos not in idx_x or pos not in idx_y:
             logger.debug(f"skipped position {pos + 1} due to no overlap")
-        elif len(idx_x[pos]) < conf.coverage or len(idx_y[pos]) < conf.coverage:
-            logger.debug(f"skipped position {pos + 1} due to insufficient coverage")
+            num_skipped_no_overlap += 1
         else:
             signals_x, signals_y = [], []
             for squig in (get_squiggle(conf, f_x, *s) for s in idx_x[pos]):
@@ -269,13 +291,16 @@ def compare_position_pairs(
                 signals_y.extend(squig)
             signals_x, signals_y = np.array(signals_x), np.array(signals_y)
             dist = kuiper(signals_x, signals_y)
-            yield pos, dist, len(idx_x[pos]) + len(idx_y[pos])
+            yield pos, dist, len(idx_x[pos]), len(idx_y[pos])
 
         # Clear index for the processed position.
         if pos in idx_x:
             del idx_x[pos]
         if pos in idx_y:
             del idx_y[pos]
+
+    if num_skipped_no_overlap:
+        logger.warning(f"skipped {num_skipped_no_overlap} positions due to no overlap")
 
 
 def distance_summing(
