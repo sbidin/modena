@@ -43,7 +43,7 @@ $ poetry run python -m modena --help # See here for more options.
 Modena outputs a simple `tsv` file with four columns:
 * position, `int`, 1-based
 * coverage, `int`, a count of all reads that contributed to the signal
-* distance, `float`, a two-sample Kuiper-test measure
+* distance, `float`, a two-sample Kuiper-test-based measure (a distance sum)
 * label, `str`, `"pos"` or `"neg"`, separating positions into two clusters
 
 ### notes
