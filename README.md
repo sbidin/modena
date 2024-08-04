@@ -7,6 +7,10 @@ It uses an unsupervised learning approach, namely resampling of nanopore
 signals followed by the Kuiper test. Unlike other unsupervised tools,
 classification is performed by 1D clustering of scores into two groups.
 
+> [!IMPORTANT]
+> This version of Modena is v2 beta. To find the stable v1 version of Modena,
+> visit [the v1.0.0 git tag](https://github.com/sbidin/modena/tree/v1.0.0).
+
 ### setup
 ```shell
 $ git clone https://github.com/sbidin/modena.git
@@ -46,7 +50,3 @@ Modena outputs a simple `tsv` file with four columns:
 * distance, `float`, a two-sample Kuiper-test-based measure (a distance sum)
 * label, `str`, `"pos"` or `"neg"`, separating positions into two clusters
 
-### notes
-Modena v1 supported only `fast5` files resquiggled by
-[tombo](https://nanoporetech.github.io/tombo/index.html). If you have an older
-dataset processed by tombo and wish to use it, visit [tag v1.0.0](https://github.com/sbidin/modena/tree/v1.0.0).
