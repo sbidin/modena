@@ -91,10 +91,10 @@ class Config:
 
 
 @click.command()
-@click.argument("blow5_x")
-@click.argument("squig_x")
-@click.argument("blow5_y")
-@click.argument("squig_y")
+@click.option("-a", "--a-blow5", "blow5_x", type=str, required=True, help="Path to first blow5")
+@click.option("-ax", "--a-squig", "squig_x", type=str, required=True, help="Path to first resquiggle")
+@click.option("-b", "--b-blow5", "blow5_y", type=str, required=True, help="Path to second blow5")
+@click.option("-bx", "--b-squig", "squig_y", type=str, required=True, help="Path to second resquiggle")
 @click.option("-r", "--resample", type=int, default=15, help="resample signals to this size (default 15)")
 @click.option("-c", "--coverage", type=str, default="auto", help="ignore positions below this coverage (default auto)")
 @click.option("-o", "--output", type=str, required=True, help="output file path")
