@@ -20,6 +20,7 @@ $ git clone https://github.com/sbidin/modena.git
 $ cd modena
 $ poetry install
 $ poetry run python -m modena --help # See options.
+$ poetry --directory path/to/modena/dir/ run python -m modena # Run outside modena dir.
 ```
 
 ### inputs
