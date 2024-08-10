@@ -42,7 +42,7 @@ $ f5c resquiggle data.fastq data.blow5 > resquiggled.tsv
 Both datasets (in this case `a` and `b`) need a `blow5` or `slow5` file and a
 corresponding `f5c`-resquiggled `tsv` file.
 ```shell
-$ poetry run python -m modena -a a.blow5 -ax b.tsv -b b.blow5 -bx bx.tsv -o out.tsv
+$ poetry run python -m modena -a a.blow5 -ax a.tsv -b b.blow5 -bx b.tsv -o out.tsv
 $ poetry run python -m modena --help # See here for more options.
 ```
 
