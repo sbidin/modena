@@ -12,6 +12,9 @@ classification is performed by 1D clustering of scores into two groups.
 > visit [the v1.0.0 git tag](https://github.com/sbidin/modena/tree/v1.0.0).
 
 ### setup
+To install and use Modena, you need at least Python 3.10 and the [Poetry
+package manager](https://python-poetry.org/docs/). Then run the following
+commands:
 ```shell
 $ git clone https://github.com/sbidin/modena.git
 $ cd modena
