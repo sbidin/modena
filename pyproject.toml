@@ -5,7 +5,7 @@ description = "Detect epigenetic and epitranscriptomic modifications."
 authors = ["Siniša Biđin <sinisa@heuristika.hr>"]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.10"
 astropy = "^5.3.4"
 click = "^8.1.7"
 kmeans1d = "^0.3.1"
@@ -23,7 +23,7 @@ build-backend = "poetry.core.masonry.api"
 line-length = 100
 exclude = [".git", ".ruff_cache"]
 per-file-ignores = {}
-target-version = "py312"
+target-version = "py310"
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 # Ruff linter rulesets to apply.
